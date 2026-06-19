@@ -1,0 +1,86 @@
+@mixin softCard {
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dateSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dateHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.dateTitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: #222;
+  text-transform: capitalize;
+  margin: 0;
+}
+
+.count {
+  font-size: 13px;
+  color: #999;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  @include softCard;
+}
+
+.empty {
+  font-size: 14px;
+  color: #aaa;
+  padding: 16px 0;
+  font-style: italic;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #f7f7f7;
+  padding: 8px 12px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 16px;
+  color: #4a4a4a;
+  text-transform: uppercase;
+}
+
+.groupInfo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #3a3a3a;
+}
