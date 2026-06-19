@@ -1,3 +1,7 @@
+@mixin smooth {
+  transition: all 0.2s ease;
+}
+
 .main {
   min-height: 100vh;
   background: #f6f8ff;
@@ -40,7 +44,65 @@
 
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterWrap {
+  position: relative;
+}
+
+.filterButton {
+  border: 1px solid #d4d9f5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #24357d;
+  background: #eef2ff;
+  cursor: pointer;
+  @include smooth;
+
+  &:hover {
+    background: #e5ebff;
+  }
+}
+
+.filterMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  min-width: 210px;
+  background: #fff;
+  border: 1px solid #dfe3f3;
+  border-radius: 10px;
+  box-shadow: 0 12px 24px rgba(17, 35, 102, 0.16);
+  padding: 6px;
+}
+
+.filterItem {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  background: transparent;
+  color: #2d3558;
+  font-size: 14px;
+  padding: 9px 10px;
+  cursor: pointer;
+  @include smooth;
+
+  &:hover {
+    background: #f1f4ff;
+  }
+}
+
+.filterItemActive {
+  background: #e8eeff;
+  color: #1f3fb0;
 }
 
 .exportButton {
@@ -53,11 +115,18 @@
   background: linear-gradient(135deg, #2d4fcf 0%, #456eff 100%);
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(45, 79, 207, 0.28);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  @include smooth;
 
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 24px rgba(45, 79, 207, 0.34);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 }
 
