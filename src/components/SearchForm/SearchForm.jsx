@@ -1,14 +1,24 @@
 'use client';
 import { useState } from 'react';
-import { AIRPORTS, CARRIERS, DATE_RANGES } from '@/lib/constants';
+import AirportSearch from '@/components/AirportSearch/AirportSearch';
+import { CARRIERS, DATE_RANGE } from '@/lib/constants';
 import styles from './SearchForm.module.scss';
+
+function formatDaysLabel(days) {
+  const mod10 = days % 10;
+  const mod100 = days % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return `${days} день`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${days} дня`;
+  return `${days} дней`;
+}
 
 export default function SearchForm({ onSearch, loading }) {
   const [form, setForm] = useState({
     from: 'TAS',
     to: 'DXB',
     startDate: new Date().toISOString().split('T')[0],
-    days: 5,
+    days: DATE_RANGE.default,
     carrierCode: 'C6',
   });
 
@@ -23,14 +33,13 @@ export default function SearchForm({ onSearch, loading }) {
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.row}>
         <div className={styles.field}>
-          <label>Откуда</label>
-          <select value={form.from} onChange={(e) => set('from', e.target.value)}>
-            {AIRPORTS.map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.code} — {a.name}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="search-from">Откуда</label>
+          <AirportSearch
+            id="search-from"
+            value={form.from}
+            onChange={(code) => set('from', code)}
+            placeholder="Например: TAS, Москва, MOW"
+          />
         </div>
 
         <button
@@ -43,14 +52,13 @@ export default function SearchForm({ onSearch, loading }) {
         </button>
 
         <div className={styles.field}>
-          <label>Куда</label>
-          <select value={form.to} onChange={(e) => set('to', e.target.value)}>
-            {AIRPORTS.map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.code} — {a.name}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="search-to">Куда</label>
+          <AirportSearch
+            id="search-to"
+            value={form.to}
+            onChange={(code) => set('to', code)}
+            placeholder="Например: DXB, MOW, Стамбул"
+          />
         </div>
       </div>
 
@@ -66,20 +74,26 @@ export default function SearchForm({ onSearch, loading }) {
         </div>
 
         <div className={styles.field}>
-          <label>Диапазон</label>
-          <div className={styles.radioGroup}>
-            {DATE_RANGES.map((r) => (
-              <label key={r.value} className={styles.radio}>
-                <input
-                  type="radio"
-                  name="days"
-                  value={r.value}
-                  checked={form.days === r.value}
-                  onChange={() => set('days', r.value)}
-                />
-                {r.label}
-              </label>
-            ))}
+          <div className={styles.rangeHeader}>
+            <label htmlFor="search-days">Диапазон</label>
+            <span className={styles.rangeValue}>+{formatDaysLabel(form.days)}</span>
+          </div>
+          <input
+            id="search-days"
+            type="range"
+            className={styles.range}
+            min={DATE_RANGE.min}
+            max={DATE_RANGE.max}
+            step={1}
+            value={form.days}
+            style={{
+              '--range-progress': `${((form.days - DATE_RANGE.min) / (DATE_RANGE.max - DATE_RANGE.min)) * 100}%`,
+            }}
+            onChange={(e) => set('days', Number(e.target.value))}
+          />
+          <div className={styles.rangeMarks}>
+            <span>{DATE_RANGE.min}</span>
+            <span>{DATE_RANGE.max}</span>
           </div>
         </div>
       </div>
