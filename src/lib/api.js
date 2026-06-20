@@ -112,7 +112,7 @@ export function filterAndNormalize(offers, carrierCode) {
     .filter((o) => !normalizedCarrier || o.carrier_code === normalizedCarrier)
     .flatMap((o) =>
       (o.offers || []).flatMap((offer) =>
-        (offer.segments || []).map((seg) => {
+        (offer.segments || []).filter((seg) => seg.buy_id).map((seg) => {
           const legs = seg.flights_info || [];
 
           return {
@@ -143,6 +143,58 @@ export function filterAndNormalize(offers, carrierCode) {
       ),
     )
     .sort((a, b) => a.price - b.price);
+}
+
+export async function checkAvailability({ request_id, buy_id, sessionCookie }) {
+  const url = `${BASE_URL}/offers/${encodeURIComponent(buy_id)}/availability?request_id=${encodeURIComponent(request_id)}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: getHeaders({ sessionCookie }),
+  });
+
+  if (!res.ok) {
+    const details = await extractErrorMessage(res);
+
+    if (res.status === 404 && /already allocated/i.test(details)) {
+      return {
+        availability: true,
+        request_id: null,
+        buy_id: String(buy_id),
+        alreadyAllocated: true,
+      };
+    }
+
+    throw new Error(`Availability failed: ${res.status}${details ? ` - ${details}` : ''}`);
+  }
+
+  const data = await res.json();
+  if (data.status !== 'ok') {
+    throw new Error(data.message || 'Availability check failed');
+  }
+
+  return {
+    availability: data.availability,
+    request_id: data.request_id,
+    buy_id: data.buy_id,
+    alreadyAllocated: false,
+  };
+}
+
+export async function loadAdditionalServices({ request_id, segment, sessionCookie }) {
+  const url = `${BASE_URL}/offers/${encodeURIComponent(request_id)}/additional-services?segment=${encodeURIComponent(segment)}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: getHeaders({ sessionCookie }),
+  });
+
+  if (!res.ok) {
+    const details = await extractErrorMessage(res);
+    const error = new Error(`Additional services failed: ${res.status}${details ? ` - ${details}` : ''}`);
+    error.status = res.status;
+    throw error;
+  }
+
+  return res.json();
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

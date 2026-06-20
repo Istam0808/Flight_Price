@@ -6,7 +6,7 @@ import styles from './PriceTable.module.scss';
 
 dayjs.locale('ru');
 
-export default function PriceTable({ results }) {
+export default function PriceTable({ results, sessionCookie = '' }) {
   const dates = Object.keys(results).sort();
 
   if (dates.length === 0) return null;
@@ -60,7 +60,11 @@ export default function PriceTable({ results }) {
 
                     <div className={styles.cards}>
                       {group.items.map((flight, idx) => (
-                        <FlightCard key={`${date}-${group.carrier_code}-${idx}`} flight={flight} />
+                        <FlightCard
+                          key={`${date}-${group.carrier_code}-${idx}`}
+                          flight={flight}
+                          sessionCookie={sessionCookie}
+                        />
                       ))}
                     </div>
                   </div>

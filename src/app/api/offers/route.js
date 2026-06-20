@@ -13,7 +13,10 @@ export async function POST(request) {
     const isAllCarriers = !carrier_code || carrier_code === 'all';
     const carrier = isAllCarriers ? '' : carrier_code;
     const rawOffers = await pollOffers(request_id, { sessionCookie });
-    const flights = filterAndNormalize(rawOffers, carrier);
+    const flights = filterAndNormalize(rawOffers, carrier).map((flight) => ({
+      ...flight,
+      request_id,
+    }));
 
     return NextResponse.json({ flights, total: flights.length });
   } catch (err) {

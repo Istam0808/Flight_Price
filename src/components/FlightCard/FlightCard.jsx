@@ -1,7 +1,13 @@
+'use client';
+
+import { useState } from 'react';
 import { formatPrice, stopsLabel } from '@/lib/utils';
 import styles from './FlightCard.module.scss';
 
-export default function FlightCard({ flight }) {
+export default function FlightCard({ flight, sessionCookie = '' }) {
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState('');
+
   const {
     carrier_name,
     flight_numbers,
@@ -17,7 +23,39 @@ export default function FlightCard({ flight }) {
     pcc_name,
     fare_label,
     price,
+    request_id,
+    buy_id,
   } = flight;
+
+  const handleBuy = async () => {
+    if (!request_id || !buy_id || buying) return;
+
+    setBuying(true);
+    setBuyError('');
+
+    try {
+      const res = await fetch('/api/buy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionCookie && { 'x-b2b-session-cookie': sessionCookie }),
+        },
+        body: JSON.stringify({ request_id, buy_id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Не удалось оформить покупку');
+      }
+
+      window.open(data.orderUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setBuyError(err.message);
+    } finally {
+      setBuying(false);
+    }
+  };
 
   return (
     <article className={styles.row}>
@@ -57,7 +95,20 @@ export default function FlightCard({ flight }) {
       </div>
 
       <div className={styles.priceCell}>
-        <div className={styles.price}>{formatPrice(price, flight.currency)}</div>
+        <div className={styles.priceBlock}>
+          <div className={styles.price}>{formatPrice(price, flight.currency)}</div>
+          {request_id && buy_id && (
+            <button
+              type="button"
+              onClick={handleBuy}
+              disabled={buying}
+              className={styles.buyBtn}
+            >
+              {buying ? 'Проверка...' : 'Купить'}
+            </button>
+          )}
+          {buyError && <div className={styles.buyError}>{buyError}</div>}
+        </div>
       </div>
     </article>
   );

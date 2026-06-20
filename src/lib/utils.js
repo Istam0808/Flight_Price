@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { B2B_ORDER_URL } from '@/lib/constants';
 
 export function formatPrice(amount, currency = 'UZS') {
   const normalizedAmount = Number(amount) || 0;
@@ -28,6 +29,13 @@ export function formatDuration(minutes) {
 
 export function formatDate(dateStr) {
   return dayjs(dateStr).format('D MMMM');
+}
+
+export function buildB2BOrderUrl(requestId, segmentId) {
+  const url = new URL(B2B_ORDER_URL);
+  url.searchParams.set('RequestId', requestId);
+  url.searchParams.set('Segment', String(segmentId));
+  return url.toString();
 }
 
 export function stopsLabel(stops) {

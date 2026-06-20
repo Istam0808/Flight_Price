@@ -307,7 +307,9 @@ export default function HomePage() {
               </div>
             </div>
 
-            {hasFilteredResults && <PriceTable results={filteredResults} />}
+            {hasFilteredResults && (
+              <PriceTable results={filteredResults} sessionCookie={cookieValue.trim()} />
+            )}
 
             {!hasFilteredResults && (
               <div className={styles.hint}>По выбранному фильтру рейсов не найдено</div>

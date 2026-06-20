@@ -14,6 +14,8 @@ export const DATE_RANGE = {
   default: 5,
 };
 
+export const B2B_ORDER_URL = 'https://b2b.prestigevoyage.uz/agent/search/order';
+
 export const FLIGHT_CLASSES = [
   { value: 'E', label: 'Эконом' },
   { value: 'B', label: 'Бизнес' },
