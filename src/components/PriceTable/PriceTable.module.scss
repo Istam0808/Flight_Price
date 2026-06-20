@@ -20,11 +20,13 @@
   display: flex;
   align-items: baseline;
   gap: 12px;
+  justify-content: space-between;
   padding-bottom: 10px;
   border-bottom: 1px solid #ebebeb;
 }
 
 .dateTitle {
+  min-width: 0;
   font-size: 17px;
   font-weight: 600;
   color: #222;
@@ -40,6 +42,8 @@
 .cards {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   @include softCard;
 }
 
@@ -59,28 +63,141 @@
 .group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+}
+
+.cardsWrap {
+  overflow: hidden;
+  margin-top: 8px;
+  opacity: 1;
+  contain: layout paint;
+  will-change: height, opacity;
+  transition:
+    height 0.22s ease,
+    margin-top 0.22s ease,
+    opacity 0.16s ease;
+}
+
+.cardsWrapCollapsed {
+  margin-top: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .groupHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  width: 100%;
   border: 1px solid #e6e6e6;
   border-radius: 8px;
   background: #f7f7f7;
   padding: 8px 12px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f1f1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #4a90e2;
+    outline-offset: 2px;
+  }
 }
 
 .groupTitle {
+  min-width: 0;
   margin: 0;
   font-size: 16px;
   color: #4a4a4a;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .groupInfo {
   font-size: 18px;
   font-weight: 700;
   color: #3a3a3a;
+  line-height: 1.25;
+}
+
+.groupMeta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.toggleIcon {
+  display: inline-flex;
+  color: #777;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+.toggleIconCollapsed {
+  transform: rotate(-90deg);
+}
+
+@media (max-width: 768px) {
+  .table {
+    gap: 20px;
+  }
+
+  .dateSection {
+    gap: 12px;
+  }
+
+  .dateHeader {
+    align-items: flex-start;
+  }
+
+  .dateTitle {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .groups {
+    gap: 12px;
+  }
+
+  .groupHeader {
+    align-items: flex-start;
+    padding: 10px 12px;
+  }
+
+  .groupInfo {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .dateHeader,
+  .groupHeader {
+    flex-direction: column;
+  }
+
+  .count,
+  .groupMeta {
+    width: 100%;
+  }
+
+  .groupMeta {
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .groupTitle {
+    font-size: 15px;
+  }
+
+  .groupInfo {
+    font-size: 15px;
+  }
 }

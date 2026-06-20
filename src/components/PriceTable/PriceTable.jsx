@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
 import FlightCard from '@/components/FlightCard/FlightCard';
@@ -6,10 +9,22 @@ import styles from './PriceTable.module.scss';
 
 dayjs.locale('ru');
 
+const COLLAPSE_ANIMATION_MS = 220;
+
 export default function PriceTable({ results, sessionCookie = '' }) {
-  const dates = Object.keys(results).sort();
+  const dates = Object.keys(results)
+    .filter((date) => Array.isArray(results[date]) && results[date].length > 0)
+    .sort();
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   if (dates.length === 0) return null;
+
+  const toggleGroup = (groupKey) => {
+    setCollapsedGroups((current) => ({
+      ...current,
+      [groupKey]: !current[groupKey],
+    }));
+  };
 
   return (
     <div className={styles.table}>
@@ -48,27 +63,40 @@ export default function PriceTable({ results, sessionCookie = '' }) {
 
             {carrierGroups.length > 0 ? (
               <div className={styles.groups}>
-                {carrierGroups.map((group) => (
-                  <div key={`${date}-${group.carrier_code}`} className={styles.group}>
-                    <div className={styles.groupHeader}>
-                      <h3 className={styles.groupTitle}>{group.carrier_name}</h3>
-                      <span className={styles.groupInfo}>
-                        {group.items.length} предложени{group.items.length === 1 ? 'е' : group.items.length < 5 ? 'я' : 'й'} от{' '}
-                        {formatPrice(group.items[0].price, group.items[0].currency)}
-                      </span>
-                    </div>
+                {carrierGroups.map((group) => {
+                  const groupKey = `${date}-${group.carrier_code}`;
+                  const isCollapsed = Boolean(collapsedGroups[groupKey]);
 
-                    <div className={styles.cards}>
-                      {group.items.map((flight, idx) => (
-                        <FlightCard
-                          key={`${date}-${group.carrier_code}-${idx}`}
-                          flight={flight}
-                          sessionCookie={sessionCookie}
-                        />
-                      ))}
+                  return (
+                    <div key={groupKey} className={styles.group}>
+                      <button
+                        className={styles.groupHeader}
+                        type="button"
+                        aria-expanded={!isCollapsed}
+                        onClick={() => toggleGroup(groupKey)}
+                      >
+                        <h3 className={styles.groupTitle}>{group.carrier_name}</h3>
+                        <span className={styles.groupMeta}>
+                          <span className={styles.groupInfo}>
+                            {group.items.length} предложени{group.items.length === 1 ? 'е' : group.items.length < 5 ? 'я' : 'й'} от{' '}
+                            {formatPrice(group.items[0].price, group.items[0].currency)}
+                          </span>
+                          <span className={`${styles.toggleIcon} ${isCollapsed ? styles.toggleIconCollapsed : ''}`} aria-hidden="true">
+                            ▾
+                          </span>
+                        </span>
+                      </button>
+
+                      <CollapsibleCards
+                        isCollapsed={isCollapsed}
+                        items={group.items}
+                        date={date}
+                        carrierCode={group.carrier_code}
+                        sessionCookie={sessionCookie}
+                      />
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className={styles.empty}>На эту дату рейсов не найдено</p>
@@ -76,6 +104,77 @@ export default function PriceTable({ results, sessionCookie = '' }) {
           </section>
         );
       })}
+    </div>
+  );
+}
+
+function CollapsibleCards({ isCollapsed, items, date, carrierCode, sessionCookie }) {
+  const contentRef = useRef(null);
+  const isInitialRender = useRef(true);
+  const [isRendered, setIsRendered] = useState(!isCollapsed);
+  const [height, setHeight] = useState(isCollapsed ? 0 : 'auto');
+
+  useEffect(() => {
+    if (!isCollapsed) {
+      setIsRendered(true);
+    }
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    if (!isRendered) return undefined;
+
+    const content = contentRef.current;
+    if (!content) return undefined;
+
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      setHeight(isCollapsed ? 0 : 'auto');
+      return undefined;
+    }
+
+    let nextAnimationFrame;
+    const animationFrame = requestAnimationFrame(() => {
+      const nextHeight = content.scrollHeight;
+
+      if (isCollapsed) {
+        setHeight(nextHeight);
+        nextAnimationFrame = requestAnimationFrame(() => setHeight(0));
+        return;
+      }
+
+      setHeight(0);
+      nextAnimationFrame = requestAnimationFrame(() => setHeight(nextHeight));
+    });
+
+    const timeout = window.setTimeout(() => {
+      if (isCollapsed) {
+        setIsRendered(false);
+        return;
+      }
+
+      setHeight('auto');
+    }, COLLAPSE_ANIMATION_MS);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      cancelAnimationFrame(nextAnimationFrame);
+      window.clearTimeout(timeout);
+    };
+  }, [isCollapsed, isRendered]);
+
+  if (!isRendered) return null;
+
+  return (
+    <div
+      className={`${styles.cardsWrap} ${isCollapsed ? styles.cardsWrapCollapsed : ''}`}
+      style={{ height }}
+      aria-hidden={isCollapsed}
+    >
+      <div ref={contentRef} className={styles.cards}>
+        {items.map((flight, idx) => (
+          <FlightCard key={`${date}-${carrierCode}-${idx}`} flight={flight} sessionCookie={sessionCookie} />
+        ))}
+      </div>
     </div>
   );
 }

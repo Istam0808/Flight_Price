@@ -30,7 +30,8 @@
 .reset {
   border: none;
   background: transparent;
-  padding: 0;
+  min-height: 32px;
+  padding: 0 2px;
   font-size: 13px;
   font-weight: 500;
   color: #7b9be0;
@@ -45,7 +46,7 @@
 .sliderWrap {
   position: relative;
   height: 34px;
-  padding: 40px 0 8px;
+  padding: 40px 4px 8px;
   margin-bottom: 8px;
   overflow: visible;
 }
@@ -72,8 +73,8 @@
 .sliderInput {
   position: absolute;
   top: 50%;
-  left: 0;
-  width: 100%;
+  left: 4px;
+  width: calc(100% - 8px);
   height: 6px;
   margin: 0;
   transform: translateY(-50%);
@@ -94,8 +95,8 @@
 
   &::-webkit-slider-thumb {
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     border: none;
     background: #7b9be0;
@@ -106,8 +107,8 @@
   }
 
   &::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     border: none;
     background: #7b9be0;
@@ -147,6 +148,9 @@
   color: #2d3558;
   white-space: nowrap;
   pointer-events: none;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   box-shadow: 0 4px 10px rgba(17, 35, 102, 0.08);
   z-index: 2;
 }
@@ -176,6 +180,11 @@
   }
 }
 
+.limit {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .inputs {
   display: flex;
   align-items: stretch;
@@ -188,9 +197,11 @@
 
 .inputWrap {
   flex: 1;
+  min-width: 0;
 
   input {
     width: 100%;
+    min-height: 40px;
     border: none;
     background: transparent;
     padding: 9px 10px;
@@ -218,4 +229,39 @@
   width: 1px;
   background: #dfe3f3;
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .sliderWrap {
+    padding-top: 34px;
+  }
+
+  .limits {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .header,
+  .limits {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header {
+    gap: 4px;
+  }
+
+  .reset {
+    padding: 0;
+  }
+
+  .inputs {
+    flex-direction: column;
+  }
+
+  .separator {
+    width: 100%;
+    height: 1px;
+  }
 }

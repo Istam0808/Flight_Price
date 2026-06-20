@@ -4,6 +4,7 @@
 }
 
 .input {
+  min-height: 44px;
   padding: 10px 12px;
   border: 1.5px solid #e0e0e0;
   border-radius: 8px;
@@ -34,6 +35,7 @@
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   max-height: 280px;
+  overscroll-behavior: contain;
   overflow-y: auto;
 }
 
@@ -44,6 +46,7 @@
   align-items: center;
   width: 100%;
   padding: 10px 12px;
+  min-height: 44px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -64,18 +67,59 @@
 }
 
 .name {
+  min-width: 0;
   font-size: 14px;
+  line-height: 1.25;
   color: #222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .country {
   font-size: 12px;
   color: #888;
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty {
   padding: 12px;
   color: #888;
   font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  .dropdown {
+    max-height: 240px;
+  }
+
+  .option {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 6px 8px;
+    padding: 10px;
+  }
+
+  .country {
+    grid-column: 2;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 360px) {
+  .input {
+    font-size: 14px;
+  }
+
+  .option {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .code,
+  .name {
+    font-size: 13px;
+  }
 }
