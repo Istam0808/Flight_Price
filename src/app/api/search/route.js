@@ -26,6 +26,8 @@ export async function POST(request) {
     return NextResponse.json({ request_id });
   } catch (err) {
     console.error('[/api/search]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const status = /Session expired/i.test(err.message) ? 403 : 500;
+
+    return NextResponse.json({ error: err.message }, { status });
   }
 }

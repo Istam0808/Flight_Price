@@ -1,7 +1,25 @@
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { generateDateRange } from '@/lib/utils';
 
+function isSessionExpiredError(message) {
+  return /Session expired/i.test(message || '');
+}
+
+async function parseApiResponse(response) {
+  const data = await response.json();
+
+  if (!response.ok) {
+    const error = new Error(data.error || `Request failed: ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return data;
+}
+
 export function useFlightSearch() {
+  const router = useRouter();
   const [results, setResults] = useState({});
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
@@ -24,7 +42,7 @@ export function useFlightSearch() {
           method: 'POST',
           headers: requestHeaders,
           body: JSON.stringify({ from, to, date }),
-        }).then((r) => r.json()),
+        }).then(parseApiResponse),
       );
 
       setProgress('Инициализация поиска...');
@@ -41,7 +59,7 @@ export function useFlightSearch() {
           body: JSON.stringify({ request_id, carrier_code: 'all' }),
         });
 
-        const data = await res.json();
+        const data = await parseApiResponse(res);
         return { date: dates[idx], flights: data.flights || [] };
       });
 
@@ -55,11 +73,16 @@ export function useFlightSearch() {
       setResults(grouped);
       setProgress('');
     } catch (err) {
+      if (err.status === 403 && isSessionExpiredError(err.message)) {
+        router.push('/login');
+        return;
+      }
+
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   return { search, results, loading, progress, error };
 }
