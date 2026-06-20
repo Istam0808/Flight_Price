@@ -7,6 +7,7 @@ import { formatDuration, formatPrice, stopsLabel } from '@/lib/utils';
 dayjs.locale('ru');
 
 const FONT_BASE_URL = 'https://cdn.jsdelivr.net/gh/googlefonts/roboto@2.138/src/hinted';
+const LOGO_URL = '/img/logo.png';
 const BRAND_NAME = 'LUMINARA VOYAGE';
 const BRAND_YELLOW = [245, 197, 24];
 const BRAND_YELLOW_DARK = [212, 168, 15];
@@ -27,10 +28,11 @@ export async function exportOffersToPdf(results, { from, to, startDate } = {}) {
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  const logo = await loadPdfImage(LOGO_URL);
 
-  drawCover(doc, pageWidth, allFlights.length);
+  const headerBottom = drawCover(doc, pageWidth, allFlights.length, logo);
 
-  let cursorY = 122;
+  let cursorY = headerBottom + 32;
 
   dates.forEach((date) => {
     const flights = (results[date] || []).sort((a, b) => a.price - b.price);
@@ -171,27 +173,87 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
-function drawCover(doc, pageWidth, offersCount) {
-  doc.setFillColor(...BRAND_YELLOW);
-  doc.rect(0, 0, pageWidth, 90, 'F');
+async function loadPdfImage(src) {
+  try {
+    const response = await fetch(src);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const blob = await response.blob();
+    const dataUrl = await blobToDataUrl(blob);
+    const dimensions = await getImageDimensions(dataUrl);
+
+    return { dataUrl, ...dimensions };
+  } catch {
+    return null;
+  }
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function getImageDimensions(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function getContainedImageSize(image, maxWidth, maxHeight) {
+  const ratio = Math.min(maxWidth / image.width, maxHeight / image.height);
+
+  return {
+    width: image.width * ratio,
+    height: image.height * ratio,
+  };
+}
+
+function drawCover(doc, pageWidth, offersCount, logo) {
+  const headerHeight = 150;
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, pageWidth, headerHeight, 'F');
   doc.setFillColor(...BRAND_YELLOW_DARK);
-  doc.rect(0, 87, pageWidth, 3, 'F');
+  doc.rect(0, headerHeight - 3, pageWidth, 3, 'F');
 
   doc.setTextColor(...BRAND_TEXT);
   doc.setFont('Roboto', 'bold');
-  doc.setFontSize(24);
-  doc.text(BRAND_NAME, 32, 44);
+  doc.setFontSize(20);
+
+  if (logo) {
+    const logoSize = getContainedImageSize(logo, 150, 112);
+    doc.addImage(logo.dataUrl, 'PNG', 32, 18, logoSize.width, logoSize.height);
+    doc.text('Прайс-лист рейсов', 32 + logoSize.width + 24, 64);
+  } else {
+    doc.text(BRAND_NAME, 32, 58);
+    doc.setFont('Roboto', 'normal');
+    doc.setFontSize(11);
+    doc.text('Прайс-лист рейсов', 32, 78);
+  }
 
   doc.setFont('Roboto', 'normal');
   doc.setFontSize(11);
-  doc.text('Прайс-лист рейсов', 32, 62);
 
   doc.setFillColor(255, 252, 235);
-  doc.roundedRect(pageWidth - 230, 20, 198, 52, 8, 8, 'F');
+  doc.roundedRect(pageWidth - 230, 48, 198, 52, 8, 8, 'F');
   doc.setTextColor(...BRAND_TEXT);
   doc.setFontSize(10);
-  doc.text(`Сформирован: ${dayjs().format('DD.MM.YYYY HH:mm')}`, pageWidth - 218, 42);
-  doc.text(`Всего предложений: ${offersCount}`, pageWidth - 218, 58);
+  doc.text(`Сформирован: ${dayjs().format('DD.MM.YYYY HH:mm')}`, pageWidth - 218, 70);
+  doc.text(`Всего предложений: ${offersCount}`, pageWidth - 218, 86);
+
+  return headerHeight;
 }
 
 function formatSectionTitle(date, count, minPrice) {
