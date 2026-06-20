@@ -111,19 +111,34 @@ export async function exportOffersToPdf(results, { from, to, startDate } = {}) {
     doc.text('Нет данных для экспорта', 40, 170);
   }
 
-  doc.save(buildPdfFileName({ from, to, startDate }));
+  doc.save(buildPdfFileName({ from, to, startDate, carrierCodes: collectCarrierCodes(results) }));
 }
 
-function buildPdfFileName({ from, to, startDate } = {}) {
+function collectCarrierCodes(results) {
+  const codes = new Set();
+
+  Object.values(results || {}).forEach((flights) => {
+    (flights || []).forEach((flight) => {
+      if (flight.carrier_code) {
+        codes.add(String(flight.carrier_code).trim().toUpperCase());
+      }
+    });
+  });
+
+  return Array.from(codes).sort();
+}
+
+function buildPdfFileName({ from, to, startDate, carrierCodes = [] } = {}) {
   const normalizedFrom = String(from || '').trim().toUpperCase();
   const normalizedTo = String(to || '').trim().toUpperCase();
   const dateLabel = startDate ? dayjs(startDate).format('DD.MM.YYYY') : dayjs().format('DD.MM.YYYY');
+  const carriersPart = carrierCodes.length ? `-${carrierCodes.join('-')}` : '';
 
   if (normalizedFrom && normalizedTo) {
-    return `${normalizedFrom}-${normalizedTo}-${dateLabel}.pdf`;
+    return `${normalizedFrom}-${normalizedTo}-${dateLabel}${carriersPart}.pdf`;
   }
 
-  return `flight-pricelist-${dayjs().format('YYYYMMDD-HHmm')}.pdf`;
+  return `flight-pricelist-${dayjs().format('YYYYMMDD-HHmm')}${carriersPart}.pdf`;
 }
 
 async function ensurePdfFonts(doc) {
