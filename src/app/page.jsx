@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SearchForm from '@/components/SearchForm/SearchForm';
 import PriceTable from '@/components/PriceTable/PriceTable';
 import Loader from '@/components/Loader/Loader';
@@ -13,11 +13,20 @@ const STOPS_FILTERS = [
   { value: '1', label: '1 пересадка' },
   { value: '2', label: '2 пересадки' },
 ];
+const COOKIE_STORAGE_KEY = 'b2b_session_cookie';
 
 export default function HomePage() {
   const { search, results, loading, progress, error } = useFlightSearch();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [stopsFilter, setStopsFilter] = useState('all');
+  const [cookieValue, setCookieValue] = useState('');
+  const [cookieStatus, setCookieStatus] = useState('');
+
+  useEffect(() => {
+    const savedCookie = localStorage.getItem(COOKIE_STORAGE_KEY) || '';
+    setCookieValue(savedCookie);
+  }, []);
 
   const filteredResults = useMemo(() => {
     if (stopsFilter === 'all') return results;
@@ -41,15 +50,46 @@ export default function HomePage() {
     exportOffersToPdf(filteredResults);
   };
 
+  const handleCookieSave = () => {
+    const normalized = cookieValue.trim();
+
+    if (!normalized) {
+      localStorage.removeItem(COOKIE_STORAGE_KEY);
+      setCookieStatus('Cookie удален из localStorage');
+      return;
+    }
+
+    localStorage.setItem(COOKIE_STORAGE_KEY, normalized);
+    setCookieStatus('Cookie сохранен');
+  };
+
+  const handleCookieClear = () => {
+    localStorage.removeItem(COOKIE_STORAGE_KEY);
+    setCookieValue('');
+    setCookieStatus('Cookie очищен');
+  };
+
+  const handleSearch = (form) => {
+    search({ ...form, sessionCookie: cookieValue.trim() });
+  };
+
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    setCookieStatus('');
+  };
+
   return (
     <main className={styles.main}>
       <div className={styles.container}>
         <header className={styles.header}>
           <h1 className={styles.title}>✈ Прайс-лист рейсов</h1>
           <p className={styles.subtitle}>Поиск по одной авиакомпании за диапазон дат</p>
+          <button type="button" className={styles.settingsButton} onClick={() => setSettingsOpen(true)}>
+            Настройки
+          </button>
         </header>
 
-        <SearchForm onSearch={search} loading={loading} />
+        <SearchForm onSearch={handleSearch} loading={loading} />
 
         {loading && <Loader message={progress || 'Поиск рейсов...'} />}
 
@@ -101,6 +141,38 @@ export default function HomePage() {
           <div className={styles.hint}>Выберите маршрут, дату и нажмите «Найти рейсы»</div>
         )}
       </div>
+
+      {settingsOpen && (
+        <div className={styles.modalOverlay} onClick={closeSettings}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className={styles.modalClose} onClick={closeSettings} aria-label="Закрыть настройки">
+              ×
+            </button>
+            <section className={styles.cookieCard}>
+              <div className={styles.cookieHeader}>
+                <h2 className={styles.cookieTitle}>B2B Session Cookie</h2>
+                <span className={styles.cookieHint}>Используется для запросов вместо env</span>
+              </div>
+              <textarea
+                className={styles.cookieInput}
+                value={cookieValue}
+                onChange={(e) => setCookieValue(e.target.value)}
+                placeholder="etmsessid=...; laravel_session=...; XSRF-TOKEN=..."
+                rows={3}
+              />
+              <div className={styles.cookieActions}>
+                <button type="button" className={styles.cookieSave} onClick={handleCookieSave}>
+                  Сохранить cookie
+                </button>
+                <button type="button" className={styles.cookieClear} onClick={handleCookieClear}>
+                  Очистить
+                </button>
+              </div>
+              {cookieStatus && <span className={styles.cookieStatus}>{cookieStatus}</span>}
+            </section>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

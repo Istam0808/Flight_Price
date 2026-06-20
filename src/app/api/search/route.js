@@ -3,6 +3,7 @@ import { startSearch } from '@/lib/api';
 
 export async function POST(request) {
   try {
+    const sessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
     const body = await request.json();
     const { from, to, date, flightClass } = body;
 
@@ -13,7 +14,13 @@ export async function POST(request) {
       );
     }
 
-    const request_id = await startSearch({ from, to, date, flightClass });
+    const request_id = await startSearch({
+      from,
+      to,
+      date,
+      flightClass,
+      sessionCookie,
+    });
     return NextResponse.json({ request_id });
   } catch (err) {
     console.error('[/api/search]', err);

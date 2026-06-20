@@ -3,6 +3,7 @@ import { pollOffers, filterAndNormalize } from '@/lib/api';
 
 export async function POST(request) {
   try {
+    const sessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
     const { request_id, carrier_code } = await request.json();
 
     if (!request_id) {
@@ -10,7 +11,7 @@ export async function POST(request) {
     }
 
     const carrier = carrier_code || process.env.NEXT_PUBLIC_DEFAULT_CARRIER || 'HY';
-    const rawOffers = await pollOffers(request_id);
+    const rawOffers = await pollOffers(request_id, { sessionCookie });
     const flights = filterAndNormalize(rawOffers, carrier);
 
     return NextResponse.json({ flights, total: flights.length });

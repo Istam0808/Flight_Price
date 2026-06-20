@@ -7,18 +7,22 @@ export function useFlightSearch() {
   const [progress, setProgress] = useState('');
   const [error, setError] = useState(null);
 
-  const search = useCallback(async ({ from, to, startDate, days, carrierCode }) => {
+  const search = useCallback(async ({ from, to, startDate, days, carrierCode, sessionCookie }) => {
     setLoading(true);
     setError(null);
     setResults({});
 
     const dates = generateDateRange(startDate, days);
+    const requestHeaders = {
+      'Content-Type': 'application/json',
+      ...(sessionCookie && { 'x-b2b-session-cookie': sessionCookie }),
+    };
 
     try {
       const searchPromises = dates.map((date) =>
         fetch('/api/search', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: requestHeaders,
           body: JSON.stringify({ from, to, date }),
         }).then((r) => r.json()),
       );
@@ -33,7 +37,7 @@ export function useFlightSearch() {
 
         const res = await fetch('/api/offers', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: requestHeaders,
           body: JSON.stringify({ request_id, carrier_code: carrierCode }),
         });
 

@@ -3,7 +3,7 @@ const TOKEN = process.env.B2B_TOKEN;
 const ETM_AUTH_KEY = process.env.B2B_ETM_AUTH_KEY;
 const SESSION_COOKIE = process.env.B2B_SESSION_COOKIE;
 
-function getHeaders() {
+function getHeaders({ sessionCookie } = {}) {
   const headers = {
     'Content-Type': 'application/json',
   };
@@ -16,17 +16,18 @@ function getHeaders() {
     headers['etm-auth-key'] = ETM_AUTH_KEY;
   }
 
-  if (SESSION_COOKIE) {
-    headers.Cookie = SESSION_COOKIE;
+  const resolvedCookie = sessionCookie || SESSION_COOKIE;
+  if (resolvedCookie) {
+    headers.Cookie = resolvedCookie;
   }
 
   return headers;
 }
 
-export async function startSearch({ from, to, date, flightClass = 'E' }) {
+export async function startSearch({ from, to, date, flightClass = 'E', sessionCookie }) {
   const res = await fetch(`${BASE_URL}/search`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: getHeaders({ sessionCookie }),
     body: JSON.stringify({
       directions: [
         {
@@ -63,7 +64,7 @@ export async function startSearch({ from, to, date, flightClass = 'E' }) {
   return data.request_id;
 }
 
-export async function pollOffers(request_id, { onProgress } = {}) {
+export async function pollOffers(request_id, { onProgress, sessionCookie } = {}) {
   let next_token = null;
   const allOffers = [];
   let attempts = 0;
@@ -80,7 +81,7 @@ export async function pollOffers(request_id, { onProgress } = {}) {
 
     const res = await fetch(`${BASE_URL}/offers`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: getHeaders({ sessionCookie }),
       body: JSON.stringify(body),
     });
 
