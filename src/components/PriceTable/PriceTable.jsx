@@ -67,7 +67,7 @@ export default function PriceTable({ results }) {
                 ))}
               </div>
             ) : (
-              <p className={styles.empty}>На эту дату рейсов выбранной авиакомпании не найдено</p>
+              <p className={styles.empty}>На эту дату рейсов не найдено</p>
             )}
           </section>
         );

@@ -133,7 +133,9 @@ export default function AirportSearch({ id, value, onChange, placeholder = 'Го
                   onClick={() => selectAirport(airport)}
                 >
                   <span className={styles.code}>{airport.code}</span>
-                  <span className={styles.name}>{airport.name}</span>
+                  <span className={styles.name}>
+                    {airport.location ? `${airport.name}, ${airport.location}` : airport.name}
+                  </span>
                   <span className={styles.country}>{airport.country}</span>
                 </button>
               </li>

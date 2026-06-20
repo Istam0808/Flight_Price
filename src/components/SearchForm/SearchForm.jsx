@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import AirportSearch from '@/components/AirportSearch/AirportSearch';
-import { CARRIERS, DATE_RANGE } from '@/lib/constants';
+import { DATE_RANGE } from '@/lib/constants';
 import styles from './SearchForm.module.scss';
 
 function formatDaysLabel(days) {
@@ -19,7 +19,6 @@ export default function SearchForm({ onSearch, loading }) {
     to: 'DXB',
     startDate: new Date().toISOString().split('T')[0],
     days: DATE_RANGE.default,
-    carrierCode: 'C6',
   });
 
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
@@ -95,19 +94,6 @@ export default function SearchForm({ onSearch, loading }) {
             <span>{DATE_RANGE.min}</span>
             <span>{DATE_RANGE.max}</span>
           </div>
-        </div>
-      </div>
-
-      <div className={styles.row}>
-        <div className={styles.field}>
-          <label>Авиакомпания</label>
-          <select value={form.carrierCode} onChange={(e) => set('carrierCode', e.target.value)}>
-            {Object.entries(CARRIERS).map(([code, name]) => (
-              <option key={code} value={code}>
-                {code} — {name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 

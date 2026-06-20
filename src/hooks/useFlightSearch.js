@@ -7,7 +7,7 @@ export function useFlightSearch() {
   const [progress, setProgress] = useState('');
   const [error, setError] = useState(null);
 
-  const search = useCallback(async ({ from, to, startDate, days, carrierCode, sessionCookie }) => {
+  const search = useCallback(async ({ from, to, startDate, days, sessionCookie }) => {
     setLoading(true);
     setError(null);
     setResults({});
@@ -38,7 +38,7 @@ export function useFlightSearch() {
         const res = await fetch('/api/offers', {
           method: 'POST',
           headers: requestHeaders,
-          body: JSON.stringify({ request_id, carrier_code: carrierCode }),
+          body: JSON.stringify({ request_id, carrier_code: 'all' }),
         });
 
         const data = await res.json();

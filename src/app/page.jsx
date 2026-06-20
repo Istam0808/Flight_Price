@@ -18,8 +18,10 @@ const COOKIE_STORAGE_KEY = 'b2b_session_cookie';
 export default function HomePage() {
   const { search, results, loading, progress, error } = useFlightSearch();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [stopsFilter, setStopsFilter] = useState('all');
+  const [carrierFilter, setCarrierFilter] = useState('all');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [carrierFilterOpen, setCarrierFilterOpen] = useState(false);
   const [cookieValue, setCookieValue] = useState('');
   const [cookieStatus, setCookieStatus] = useState('');
 
@@ -28,23 +30,51 @@ export default function HomePage() {
     setCookieValue(savedCookie);
   }, []);
 
-  const filteredResults = useMemo(() => {
-    if (stopsFilter === 'all') return results;
+  const availableCarriers = useMemo(() => {
+    const carriers = new Map();
 
-    const filterValue = Number(stopsFilter);
+    Object.values(results).forEach((flights) => {
+      (flights || []).forEach((flight) => {
+        if (!carriers.has(flight.carrier_code)) {
+          carriers.set(flight.carrier_code, flight.carrier_name);
+        }
+      });
+    });
+
+    return Array.from(carriers.entries())
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  }, [results]);
+
+  const filteredResults = useMemo(() => {
     const next = {};
 
     Object.entries(results).forEach(([date, flights]) => {
-      next[date] = (flights || []).filter((flight) => (flight.stops ?? 0) === filterValue);
+      let filtered = flights || [];
+
+      if (stopsFilter !== 'all') {
+        const filterValue = Number(stopsFilter);
+        filtered = filtered.filter((flight) => (flight.stops ?? 0) === filterValue);
+      }
+
+      if (carrierFilter !== 'all') {
+        filtered = filtered.filter((flight) => flight.carrier_code === carrierFilter);
+      }
+
+      next[date] = filtered;
     });
 
     return next;
-  }, [results, stopsFilter]);
+  }, [results, stopsFilter, carrierFilter]);
 
   const hasRawResults = Object.keys(results).length > 0;
   const filteredFlightsCount = Object.values(filteredResults).reduce((sum, flights) => sum + flights.length, 0);
   const hasFilteredResults = filteredFlightsCount > 0;
   const selectedFilterLabel = STOPS_FILTERS.find((item) => item.value === stopsFilter)?.label || 'Все рейсы';
+  const selectedCarrierLabel =
+    carrierFilter === 'all'
+      ? 'Все авиакомпании'
+      : availableCarriers.find((item) => item.code === carrierFilter)?.name || carrierFilter;
 
   const handleExportPdf = async () => {
     await exportOffersToPdf(filteredResults);
@@ -70,6 +100,8 @@ export default function HomePage() {
   };
 
   const handleSearch = (form) => {
+    setStopsFilter('all');
+    setCarrierFilter('all');
     search({ ...form, sessionCookie: cookieValue.trim() });
   };
 
@@ -105,26 +137,68 @@ export default function HomePage() {
 
         {!loading && hasRawResults && (
           <div className={styles.actions}>
-            <div className={styles.filterWrap}>
-              <button type="button" className={styles.filterButton} onClick={() => setFilterOpen((prev) => !prev)}>
-                Фильтр: {selectedFilterLabel}
-              </button>
+            <div className={styles.filters}>
+              <div className={styles.filterWrap}>
+                <button type="button" className={styles.filterButton} onClick={() => setFilterOpen((prev) => !prev)}>
+                  Пересадки: {selectedFilterLabel}
+                </button>
 
-              {filterOpen && (
-                <div className={styles.filterMenu}>
-                  {STOPS_FILTERS.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      className={`${styles.filterItem} ${stopsFilter === item.value ? styles.filterItemActive : ''}`}
-                      onClick={() => {
-                        setStopsFilter(item.value);
-                        setFilterOpen(false);
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+                {filterOpen && (
+                  <div className={styles.filterMenu}>
+                    {STOPS_FILTERS.map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        className={`${styles.filterItem} ${stopsFilter === item.value ? styles.filterItemActive : ''}`}
+                        onClick={() => {
+                          setStopsFilter(item.value);
+                          setFilterOpen(false);
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {availableCarriers.length > 0 && (
+                <div className={styles.filterWrap}>
+                  <button
+                    type="button"
+                    className={styles.filterButton}
+                    onClick={() => setCarrierFilterOpen((prev) => !prev)}
+                  >
+                    Авиакомпания: {selectedCarrierLabel}
+                  </button>
+
+                  {carrierFilterOpen && (
+                    <div className={styles.filterMenu}>
+                      <button
+                        type="button"
+                        className={`${styles.filterItem} ${carrierFilter === 'all' ? styles.filterItemActive : ''}`}
+                        onClick={() => {
+                          setCarrierFilter('all');
+                          setCarrierFilterOpen(false);
+                        }}
+                      >
+                        Все авиакомпании
+                      </button>
+                      {availableCarriers.map((item) => (
+                        <button
+                          key={item.code}
+                          type="button"
+                          className={`${styles.filterItem} ${carrierFilter === item.code ? styles.filterItemActive : ''}`}
+                          onClick={() => {
+                            setCarrierFilter(item.code);
+                            setCarrierFilterOpen(false);
+                          }}
+                        >
+                          {item.code} — {item.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

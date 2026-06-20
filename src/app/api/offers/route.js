@@ -10,7 +10,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'request_id обязателен' }, { status: 400 });
     }
 
-    const carrier = carrier_code || process.env.NEXT_PUBLIC_DEFAULT_CARRIER || 'HY';
+    const isAllCarriers = !carrier_code || carrier_code === 'all';
+    const carrier = isAllCarriers ? '' : carrier_code;
     const rawOffers = await pollOffers(request_id, { sessionCookie });
     const flights = filterAndNormalize(rawOffers, carrier);
 
