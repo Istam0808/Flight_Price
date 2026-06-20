@@ -5,6 +5,7 @@ import PriceTable from '@/components/PriceTable/PriceTable';
 import Loader from '@/components/Loader/Loader';
 import { useFlightSearch } from '@/hooks/useFlightSearch';
 import { exportOffersToPdf } from '@/lib/pdf';
+import { formatOffersForTelegram } from '@/lib/telegram';
 import styles from './page.module.scss';
 
 const STOPS_FILTERS = [
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [cookieValue, setCookieValue] = useState('');
   const [cookieStatus, setCookieStatus] = useState('');
   const [lastSearch, setLastSearch] = useState(null);
+  const [copyStatus, setCopyStatus] = useState('');
 
   useEffect(() => {
     const savedCookie = localStorage.getItem(COOKIE_STORAGE_KEY) || '';
@@ -79,6 +81,18 @@ export default function HomePage() {
 
   const handleExportPdf = async () => {
     await exportOffersToPdf(filteredResults, lastSearch || {});
+  };
+
+  const handleCopyTg = async () => {
+    try {
+      const text = formatOffersForTelegram(filteredResults, lastSearch || {});
+      await navigator.clipboard.writeText(text);
+      setCopyStatus('Скопировано!');
+    } catch {
+      setCopyStatus('Ошибка копирования');
+    }
+
+    window.setTimeout(() => setCopyStatus(''), 2000);
   };
 
   const handleCookieSave = () => {
@@ -205,9 +219,14 @@ export default function HomePage() {
               )}
             </div>
 
-            <button type="button" className={styles.exportButton} onClick={handleExportPdf} disabled={!hasFilteredResults}>
-              Экспорт PDF ({filteredFlightsCount})
-            </button>
+            <div className={styles.exportActions}>
+              <button type="button" className={styles.copyTgButton} onClick={handleCopyTg} disabled={!hasFilteredResults}>
+                {copyStatus || 'Copy TG'}
+              </button>
+              <button type="button" className={styles.exportButton} onClick={handleExportPdf} disabled={!hasFilteredResults}>
+                Экспорт PDF ({filteredFlightsCount})
+              </button>
+            </div>
           </div>
         )}
 
