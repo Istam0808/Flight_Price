@@ -5,48 +5,69 @@
 .main {
   min-height: 100vh;
   background: #f6f8ff;
-  padding: 40px 16px 80px;
+  padding: 0 0 80px;
 }
 
 .container {
   max-width: 900px;
   margin: 0 auto;
+  padding: 32px 16px 0;
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
 
 .header {
-  text-align: center;
+  background: #f5c518;
+  border-bottom: 3px solid #d4a80f;
+  box-shadow: 0 4px 16px rgba(180, 140, 0, 0.18);
 }
 
-.title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0 0 8px;
+.headerInner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 22px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.subtitle {
-  font-size: 16px;
-  color: #666;
+.headerBrand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brandTitle {
   margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #1a1608;
+}
+
+.brandSubtitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3d3412;
 }
 
 .settingsButton {
-  margin-top: 14px;
-  border: 1px solid #d4daf7;
+  flex-shrink: 0;
+  border: 1px solid rgba(26, 22, 8, 0.18);
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 14px;
   font-weight: 600;
-  color: #2a3a7f;
-  background: #edf1ff;
+  color: #1a1608;
+  background: rgba(255, 255, 255, 0.42);
   cursor: pointer;
   @include smooth;
 
   &:hover {
-    background: #e3eaff;
+    background: rgba(255, 255, 255, 0.68);
   }
 }
 

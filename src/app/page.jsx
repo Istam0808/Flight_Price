@@ -46,8 +46,8 @@ export default function HomePage() {
   const hasFilteredResults = filteredFlightsCount > 0;
   const selectedFilterLabel = STOPS_FILTERS.find((item) => item.value === stopsFilter)?.label || 'Все рейсы';
 
-  const handleExportPdf = () => {
-    exportOffersToPdf(filteredResults);
+  const handleExportPdf = async () => {
+    await exportOffersToPdf(filteredResults);
   };
 
   const handleCookieSave = () => {
@@ -80,15 +80,19 @@ export default function HomePage() {
 
   return (
     <main className={styles.main}>
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>✈ Прайс-лист рейсов</h1>
-          <p className={styles.subtitle}>Поиск по одной авиакомпании за диапазон дат</p>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <div className={styles.headerBrand}>
+            <h1 className={styles.brandTitle}>LUMINARA VOYAGE</h1>
+            <p className={styles.brandSubtitle}>Прайс-лист рейсов</p>
+          </div>
           <button type="button" className={styles.settingsButton} onClick={() => setSettingsOpen(true)}>
             Настройки
           </button>
-        </header>
+        </div>
+      </header>
 
+      <div className={styles.container}>
         <SearchForm onSearch={handleSearch} loading={loading} />
 
         {loading && <Loader message={progress || 'Поиск рейсов...'} />}

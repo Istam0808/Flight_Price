@@ -1,8 +1,8 @@
 import './globals.scss';
 
 export const metadata = {
-  title: 'Flight Price List',
-  description: 'Прайс-лист авиабилетов по выбранной авиакомпании',
+  title: 'LUMINARA VOYAGE',
+  description: 'Прайс-лист авиабилетов LUMINARA VOYAGE',
 };
 
 export default function RootLayout({ children }) {

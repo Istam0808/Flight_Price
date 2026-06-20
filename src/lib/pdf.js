@@ -1,9 +1,19 @@
 import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatPrice } from '@/lib/utils';
+import { formatDuration, formatPrice, stopsLabel } from '@/lib/utils';
 
-export function exportOffersToPdf(results) {
+dayjs.locale('ru');
+
+const FONT_BASE_URL = 'https://cdn.jsdelivr.net/gh/googlefonts/roboto@2.138/src/hinted';
+const BRAND_NAME = 'LUMINARA VOYAGE';
+const BRAND_YELLOW = [245, 197, 24];
+const BRAND_YELLOW_DARK = [212, 168, 15];
+const BRAND_TEXT = [26, 22, 8];
+let fontsCache = null;
+
+export async function exportOffersToPdf(results) {
   const dates = Object.keys(results || {}).sort();
   const allFlights = dates.flatMap((date) => results[date] || []);
 
@@ -12,6 +22,8 @@ export function exportOffersToPdf(results) {
     unit: 'pt',
     format: 'a4',
   });
+
+  await ensurePdfFonts(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -30,34 +42,34 @@ export function exportOffersToPdf(results) {
     }
 
     const minPrice = flights.reduce((min, item) => (item.price < min ? item.price : min), flights[0].price);
-    const title = `${dayjs(date).format('dddd, D MMMM YYYY')}  |  ${flights.length} offers  |  from ${formatPrice(minPrice, 'UZS')}`;
+    const title = formatSectionTitle(date, flights.length, minPrice);
 
     doc.setFillColor(245, 247, 255);
-    doc.roundedRect(28, cursorY, pageWidth - 56, 26, 5, 5, 'F');
+    doc.roundedRect(28, cursorY, pageWidth - 56, 28, 5, 5, 'F');
     doc.setTextColor(30, 36, 80);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, 36, cursorY + 17);
+    doc.setFont('Roboto', 'bold');
+    doc.text(title, 36, cursorY + 18);
 
-    cursorY += 34;
+    cursorY += 36;
 
     autoTable(doc, {
       startY: cursorY,
       margin: { left: 28, right: 28 },
-      head: [['Airline', 'Flight', 'Route', 'Time', 'Duration', 'Stops', 'Fare', 'Baggage', 'Price']],
+      head: [['Авиакомпания', 'Рейс', 'Маршрут', 'Время', 'В пути', 'Пересадки', 'Тариф', 'Багаж', 'Цена']],
       body: flights.map((flight) => [
-        flight.carrier_name || flight.carrier_code || '-',
-        flight.flight_numbers || '-',
-        `${flight.departure_airport || '-'} -> ${flight.arrival_airport || '-'}`,
-        `${sliceTime(flight.departure_time)} - ${sliceTime(flight.arrival_time)}`,
-        flight.duration_text || '-',
-        formatStops(flight.stops ?? 0),
-        flight.tariff || '-',
-        flight.baggage || '-',
+        flight.carrier_name || flight.carrier_code || '—',
+        flight.flight_numbers || '—',
+        `${flight.departure_airport || '—'} → ${flight.arrival_airport || '—'}`,
+        `${sliceTime(flight.departure_time)} – ${sliceTime(flight.arrival_time)}`,
+        getDurationText(flight),
+        stopsLabel(flight.stops ?? 0),
+        flight.tariff || '—',
+        flight.baggage || '—',
         formatPrice(flight.price, flight.currency || 'UZS'),
       ]),
       styles: {
-        font: 'helvetica',
+        font: 'Roboto',
         fontSize: 9,
         cellPadding: 5,
         textColor: [40, 40, 40],
@@ -65,8 +77,9 @@ export function exportOffersToPdf(results) {
         lineWidth: 0.5,
       },
       headStyles: {
-        fillColor: [39, 63, 154],
-        textColor: [255, 255, 255],
+        font: 'Roboto',
+        fillColor: BRAND_YELLOW,
+        textColor: BRAND_TEXT,
         fontStyle: 'bold',
       },
       alternateRowStyles: {
@@ -94,40 +107,94 @@ export function exportOffersToPdf(results) {
   if (!allFlights.length) {
     doc.setTextColor(120, 120, 120);
     doc.setFontSize(12);
-    doc.text('No data to export', 40, 170);
+    doc.setFont('Roboto', 'normal');
+    doc.text('Нет данных для экспорта', 40, 170);
   }
 
   doc.save(`flight-pricelist-${dayjs().format('YYYYMMDD-HHmm')}.pdf`);
 }
 
+async function ensurePdfFonts(doc) {
+  if (!fontsCache) {
+    const [regular, bold] = await Promise.all([
+      fetch(`${FONT_BASE_URL}/Roboto-Regular.ttf`).then((response) => response.arrayBuffer()),
+      fetch(`${FONT_BASE_URL}/Roboto-Bold.ttf`).then((response) => response.arrayBuffer()),
+    ]);
+
+    fontsCache = {
+      regular: arrayBufferToBase64(regular),
+      bold: arrayBufferToBase64(bold),
+    };
+  }
+
+  doc.addFileToVFS('Roboto-Regular.ttf', fontsCache.regular);
+  doc.addFileToVFS('Roboto-Bold.ttf', fontsCache.bold);
+  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+
+  return btoa(binary);
+}
+
 function drawCover(doc, pageWidth, offersCount) {
-  doc.setFillColor(39, 63, 154);
+  doc.setFillColor(...BRAND_YELLOW);
   doc.rect(0, 0, pageWidth, 90, 'F');
+  doc.setFillColor(...BRAND_YELLOW_DARK);
+  doc.rect(0, 87, pageWidth, 3, 'F');
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text('Flight Price List', 32, 42);
+  doc.setTextColor(...BRAND_TEXT);
+  doc.setFont('Roboto', 'bold');
+  doc.setFontSize(24);
+  doc.text(BRAND_NAME, 32, 44);
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Roboto', 'normal');
   doc.setFontSize(11);
-  doc.text('Exported B2B flight offers', 32, 62);
+  doc.text('Прайс-лист рейсов', 32, 62);
 
-  doc.setFillColor(242, 246, 255);
-  doc.roundedRect(pageWidth - 210, 20, 178, 52, 8, 8, 'F');
-  doc.setTextColor(30, 36, 80);
+  doc.setFillColor(255, 252, 235);
+  doc.roundedRect(pageWidth - 230, 20, 198, 52, 8, 8, 'F');
+  doc.setTextColor(...BRAND_TEXT);
   doc.setFontSize(10);
-  doc.text(`Generated: ${dayjs().format('DD.MM.YYYY HH:mm')}`, pageWidth - 198, 42);
-  doc.text(`Total offers: ${offersCount}`, pageWidth - 198, 58);
+  doc.text(`Сформирован: ${dayjs().format('DD.MM.YYYY HH:mm')}`, pageWidth - 218, 42);
+  doc.text(`Всего предложений: ${offersCount}`, pageWidth - 218, 58);
+}
+
+function formatSectionTitle(date, count, minPrice) {
+  const dateLabel = capitalize(dayjs(date).format('dddd, D MMMM YYYY'));
+  return `${dateLabel}  ·  ${offersLabel(count)}  ·  от ${formatPrice(minPrice, 'UZS')}`;
+}
+
+function offersLabel(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return `${count} предложение`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${count} предложения`;
+  return `${count} предложений`;
+}
+
+function capitalize(value) {
+  if (!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getDurationText(flight) {
+  if (flight.duration_minutes) {
+    return formatDuration(flight.duration_minutes);
+  }
+
+  return flight.duration_text || '—';
 }
 
 function sliceTime(time) {
   if (!time) return '--:--';
   return String(time).slice(0, 5);
-}
-
-function formatStops(stops) {
-  if (stops === 0) return 'Direct';
-  if (stops === 1) return '1 stop';
-  return `${stops} stops`;
 }
