@@ -187,7 +187,7 @@ export default function HomePage() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.headerBrand}>
-            <h1 className={styles.brandTitle}>LUMINARA VOYAGE</h1>
+            <img src="/img/logo.png" alt="Luminara Voyage" className={styles.brandLogo} />
             <p className={styles.brandSubtitle}>Прайс-лист рейсов</p>
           </div>
           <button type="button" className={styles.settingsButton} onClick={() => setSettingsOpen(true)}>
