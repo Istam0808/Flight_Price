@@ -13,7 +13,7 @@ const BRAND_YELLOW_DARK = [212, 168, 15];
 const BRAND_TEXT = [26, 22, 8];
 let fontsCache = null;
 
-export async function exportOffersToPdf(results) {
+export async function exportOffersToPdf(results, { from, to, startDate } = {}) {
   const dates = Object.keys(results || {}).sort();
   const allFlights = dates.flatMap((date) => results[date] || []);
 
@@ -111,7 +111,19 @@ export async function exportOffersToPdf(results) {
     doc.text('Нет данных для экспорта', 40, 170);
   }
 
-  doc.save(`flight-pricelist-${dayjs().format('YYYYMMDD-HHmm')}.pdf`);
+  doc.save(buildPdfFileName({ from, to, startDate }));
+}
+
+function buildPdfFileName({ from, to, startDate } = {}) {
+  const normalizedFrom = String(from || '').trim().toUpperCase();
+  const normalizedTo = String(to || '').trim().toUpperCase();
+  const dateLabel = startDate ? dayjs(startDate).format('DD.MM.YYYY') : dayjs().format('DD.MM.YYYY');
+
+  if (normalizedFrom && normalizedTo) {
+    return `${normalizedFrom}-${normalizedTo}-${dateLabel}.pdf`;
+  }
+
+  return `flight-pricelist-${dayjs().format('YYYYMMDD-HHmm')}.pdf`;
 }
 
 async function ensurePdfFonts(doc) {

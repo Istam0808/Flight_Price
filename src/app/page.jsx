@@ -24,6 +24,7 @@ export default function HomePage() {
   const [carrierFilterOpen, setCarrierFilterOpen] = useState(false);
   const [cookieValue, setCookieValue] = useState('');
   const [cookieStatus, setCookieStatus] = useState('');
+  const [lastSearch, setLastSearch] = useState(null);
 
   useEffect(() => {
     const savedCookie = localStorage.getItem(COOKIE_STORAGE_KEY) || '';
@@ -77,7 +78,7 @@ export default function HomePage() {
       : availableCarriers.find((item) => item.code === carrierFilter)?.name || carrierFilter;
 
   const handleExportPdf = async () => {
-    await exportOffersToPdf(filteredResults);
+    await exportOffersToPdf(filteredResults, lastSearch || {});
   };
 
   const handleCookieSave = () => {
@@ -102,6 +103,7 @@ export default function HomePage() {
   const handleSearch = (form) => {
     setStopsFilter('all');
     setCarrierFilter('all');
+    setLastSearch({ from: form.from, to: form.to, startDate: form.startDate });
     search({ ...form, sessionCookie: cookieValue.trim() });
   };
 
