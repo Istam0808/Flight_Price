@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import SearchForm from '@/components/SearchForm/SearchForm';
 import PriceTable from '@/components/PriceTable/PriceTable';
+import PriceRangeFilter from '@/components/PriceRangeFilter/PriceRangeFilter';
 import Loader from '@/components/Loader/Loader';
 import { useFlightSearch } from '@/hooks/useFlightSearch';
 import { exportOffersToPdf } from '@/lib/pdf';
@@ -16,6 +17,21 @@ const STOPS_FILTERS = [
 ];
 const COOKIE_STORAGE_KEY = 'b2b_session_cookie';
 
+function filterByStopsAndCarrier(flights, stopsFilter, carrierFilter) {
+  let filtered = flights || [];
+
+  if (stopsFilter !== 'all') {
+    const filterValue = Number(stopsFilter);
+    filtered = filtered.filter((flight) => (flight.stops ?? 0) === filterValue);
+  }
+
+  if (carrierFilter !== 'all') {
+    filtered = filtered.filter((flight) => flight.carrier_code === carrierFilter);
+  }
+
+  return filtered;
+}
+
 export default function HomePage() {
   const { search, results, loading, progress, error } = useFlightSearch();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -23,6 +39,7 @@ export default function HomePage() {
   const [carrierFilter, setCarrierFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [carrierFilterOpen, setCarrierFilterOpen] = useState(false);
+  const [priceRange, setPriceRange] = useState(null);
   const [cookieValue, setCookieValue] = useState('');
   const [cookieStatus, setCookieStatus] = useState('');
   const [lastSearch, setLastSearch] = useState(null);
@@ -49,26 +66,60 @@ export default function HomePage() {
       .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   }, [results]);
 
-  const filteredResults = useMemo(() => {
+  const resultsBeforePrice = useMemo(() => {
     const next = {};
 
     Object.entries(results).forEach(([date, flights]) => {
+      next[date] = filterByStopsAndCarrier(flights, stopsFilter, carrierFilter);
+    });
+
+    return next;
+  }, [results, stopsFilter, carrierFilter]);
+
+  const priceBounds = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+
+    Object.values(resultsBeforePrice).forEach((flights) => {
+      (flights || []).forEach((flight) => {
+        if (flight.price < min) min = flight.price;
+        if (flight.price > max) max = flight.price;
+      });
+    });
+
+    if (!Number.isFinite(min)) {
+      return { min: 0, max: 0 };
+    }
+
+    return { min, max };
+  }, [resultsBeforePrice]);
+
+  useEffect(() => {
+    if (priceBounds.max <= 0) {
+      setPriceRange(null);
+      return;
+    }
+
+    setPriceRange({ min: priceBounds.min, max: priceBounds.max });
+  }, [priceBounds]);
+
+  const filteredResults = useMemo(() => {
+    const next = {};
+
+    Object.entries(resultsBeforePrice).forEach(([date, flights]) => {
       let filtered = flights || [];
 
-      if (stopsFilter !== 'all') {
-        const filterValue = Number(stopsFilter);
-        filtered = filtered.filter((flight) => (flight.stops ?? 0) === filterValue);
-      }
-
-      if (carrierFilter !== 'all') {
-        filtered = filtered.filter((flight) => flight.carrier_code === carrierFilter);
+      if (priceRange) {
+        filtered = filtered.filter(
+          (flight) => flight.price >= priceRange.min && flight.price <= priceRange.max,
+        );
       }
 
       next[date] = filtered;
     });
 
     return next;
-  }, [results, stopsFilter, carrierFilter]);
+  }, [resultsBeforePrice, priceRange]);
 
   const hasRawResults = Object.keys(results).length > 0;
   const filteredFlightsCount = Object.values(filteredResults).reduce((sum, flights) => sum + flights.length, 0);
@@ -117,8 +168,13 @@ export default function HomePage() {
   const handleSearch = (form) => {
     setStopsFilter('all');
     setCarrierFilter('all');
+    setPriceRange(null);
     setLastSearch({ from: form.from, to: form.to, startDate: form.startDate });
     search({ ...form, sessionCookie: cookieValue.trim() });
+  };
+
+  const handlePriceReset = () => {
+    setPriceRange({ min: priceBounds.min, max: priceBounds.max });
   };
 
   const closeSettings = () => {
@@ -151,95 +207,114 @@ export default function HomePage() {
           </div>
         )}
 
-        {!loading && hasRawResults && (
-          <div className={styles.actions}>
-            <div className={styles.filters}>
-              <div className={styles.filterWrap}>
-                <button type="button" className={styles.filterButton} onClick={() => setFilterOpen((prev) => !prev)}>
-                  Пересадки: {selectedFilterLabel}
-                </button>
+        {!loading && !hasRawResults && !error && (
+          <div className={styles.hint}>Выберите маршрут, дату и нажмите «Найти рейсы»</div>
+        )}
+      </div>
 
-                {filterOpen && (
-                  <div className={styles.filterMenu}>
-                    {STOPS_FILTERS.map((item) => (
-                      <button
-                        key={item.value}
-                        type="button"
-                        className={`${styles.filterItem} ${stopsFilter === item.value ? styles.filterItemActive : ''}`}
-                        onClick={() => {
-                          setStopsFilter(item.value);
-                          setFilterOpen(false);
-                        }}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+      {!loading && hasRawResults && (
+        <div className={styles.resultsShell}>
+          {priceBounds.max > 0 && priceRange && (
+            <aside className={styles.priceSidebar}>
+              <div className={styles.priceFilterPanel}>
+                <PriceRangeFilter
+                  boundsMin={priceBounds.min}
+                  boundsMax={priceBounds.max}
+                  valueMin={priceRange.min}
+                  valueMax={priceRange.max}
+                  onChange={({ min, max }) => setPriceRange({ min, max })}
+                  onReset={handlePriceReset}
+                />
               </div>
+            </aside>
+          )}
 
-              {availableCarriers.length > 0 && (
+          <div className={styles.mainContent}>
+            <div className={styles.actions}>
+              <div className={styles.filters}>
                 <div className={styles.filterWrap}>
-                  <button
-                    type="button"
-                    className={styles.filterButton}
-                    onClick={() => setCarrierFilterOpen((prev) => !prev)}
-                  >
-                    Авиакомпания: {selectedCarrierLabel}
+                  <button type="button" className={styles.filterButton} onClick={() => setFilterOpen((prev) => !prev)}>
+                    Пересадки: {selectedFilterLabel}
                   </button>
 
-                  {carrierFilterOpen && (
+                  {filterOpen && (
                     <div className={styles.filterMenu}>
-                      <button
-                        type="button"
-                        className={`${styles.filterItem} ${carrierFilter === 'all' ? styles.filterItemActive : ''}`}
-                        onClick={() => {
-                          setCarrierFilter('all');
-                          setCarrierFilterOpen(false);
-                        }}
-                      >
-                        Все авиакомпании
-                      </button>
-                      {availableCarriers.map((item) => (
+                      {STOPS_FILTERS.map((item) => (
                         <button
-                          key={item.code}
+                          key={item.value}
                           type="button"
-                          className={`${styles.filterItem} ${carrierFilter === item.code ? styles.filterItemActive : ''}`}
+                          className={`${styles.filterItem} ${stopsFilter === item.value ? styles.filterItemActive : ''}`}
                           onClick={() => {
-                            setCarrierFilter(item.code);
-                            setCarrierFilterOpen(false);
+                            setStopsFilter(item.value);
+                            setFilterOpen(false);
                           }}
                         >
-                          {item.code} — {item.name}
+                          {item.label}
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-              )}
+
+                {availableCarriers.length > 0 && (
+                  <div className={styles.filterWrap}>
+                    <button
+                      type="button"
+                      className={styles.filterButton}
+                      onClick={() => setCarrierFilterOpen((prev) => !prev)}
+                    >
+                      Авиакомпания: {selectedCarrierLabel}
+                    </button>
+
+                    {carrierFilterOpen && (
+                      <div className={styles.filterMenu}>
+                        <button
+                          type="button"
+                          className={`${styles.filterItem} ${carrierFilter === 'all' ? styles.filterItemActive : ''}`}
+                          onClick={() => {
+                            setCarrierFilter('all');
+                            setCarrierFilterOpen(false);
+                          }}
+                        >
+                          Все авиакомпании
+                        </button>
+                        {availableCarriers.map((item) => (
+                          <button
+                            key={item.code}
+                            type="button"
+                            className={`${styles.filterItem} ${carrierFilter === item.code ? styles.filterItemActive : ''}`}
+                            onClick={() => {
+                              setCarrierFilter(item.code);
+                              setCarrierFilterOpen(false);
+                            }}
+                          >
+                            {item.code} — {item.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.exportActions}>
+                <button type="button" className={styles.copyTgButton} onClick={handleCopyTg} disabled={!hasFilteredResults}>
+                  {copyStatus || 'Copy TG'}
+                </button>
+                <button type="button" className={styles.exportButton} onClick={handleExportPdf} disabled={!hasFilteredResults}>
+                  Экспорт PDF ({filteredFlightsCount})
+                </button>
+              </div>
             </div>
 
-            <div className={styles.exportActions}>
-              <button type="button" className={styles.copyTgButton} onClick={handleCopyTg} disabled={!hasFilteredResults}>
-                {copyStatus || 'Copy TG'}
-              </button>
-              <button type="button" className={styles.exportButton} onClick={handleExportPdf} disabled={!hasFilteredResults}>
-                Экспорт PDF ({filteredFlightsCount})
-              </button>
-            </div>
+            {hasFilteredResults && <PriceTable results={filteredResults} />}
+
+            {!hasFilteredResults && (
+              <div className={styles.hint}>По выбранному фильтру рейсов не найдено</div>
+            )}
           </div>
-        )}
-
-        {!loading && hasFilteredResults && <PriceTable results={filteredResults} />}
-
-        {!loading && hasRawResults && !hasFilteredResults && (
-          <div className={styles.hint}>По выбранному фильтру рейсов не найдено</div>
-        )}
-
-        {!loading && !hasRawResults && !error && (
-          <div className={styles.hint}>Выберите маршрут, дату и нажмите «Найти рейсы»</div>
-        )}
-      </div>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className={styles.modalOverlay} onClick={closeSettings}>
