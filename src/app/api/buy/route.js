@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { checkAvailability, loadAdditionalServices } from '@/lib/api';
+import { getStoredB2BSessionCookie } from '@/lib/b2bAuth';
 import { buildB2BOrderUrl } from '@/lib/utils';
 
 export async function POST(request) {
   try {
-    const sessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
+    const manualSessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
+    const sessionCookie = getStoredB2BSessionCookie(request) || manualSessionCookie;
     const { request_id, buy_id } = await request.json();
 
     if (!request_id || !buy_id) {

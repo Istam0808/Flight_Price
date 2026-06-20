@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { startSearch } from '@/lib/api';
+import { getStoredB2BSessionCookie } from '@/lib/b2bAuth';
 
 export async function POST(request) {
   try {
-    const sessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
+    const manualSessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
+    const sessionCookie = getStoredB2BSessionCookie(request) || manualSessionCookie;
     const body = await request.json();
     const { from, to, date, flightClass } = body;
 

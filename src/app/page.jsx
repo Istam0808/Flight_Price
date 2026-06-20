@@ -44,10 +44,13 @@ export default function HomePage() {
   const [cookieStatus, setCookieStatus] = useState('');
   const [lastSearch, setLastSearch] = useState(null);
   const [copyStatus, setCopyStatus] = useState('');
+  const [authStatus, setAuthStatus] = useState('checking');
+  const [authMessage, setAuthMessage] = useState('');
 
   useEffect(() => {
     const savedCookie = localStorage.getItem(COOKIE_STORAGE_KEY) || '';
     setCookieValue(savedCookie);
+    refreshAuthStatus();
   }, []);
 
   const availableCarriers = useMemo(() => {
@@ -163,6 +166,29 @@ export default function HomePage() {
     localStorage.removeItem(COOKIE_STORAGE_KEY);
     setCookieValue('');
     setCookieStatus('Cookie очищен');
+  };
+
+  const refreshAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/status');
+      const data = await response.json();
+
+      setAuthStatus(data.authenticated ? 'authenticated' : 'anonymous');
+    } catch {
+      setAuthStatus('unknown');
+    }
+  };
+
+  const handleLogout = async () => {
+    setAuthMessage('');
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setAuthStatus('anonymous');
+      setAuthMessage('Вы вышли из B2B');
+    } catch {
+      setAuthMessage('Не удалось выйти из B2B');
+    }
   };
 
   const handleSearch = (form) => {
@@ -324,6 +350,31 @@ export default function HomePage() {
             <button type="button" className={styles.modalClose} onClick={closeSettings} aria-label="Закрыть настройки">
               ×
             </button>
+            <section className={styles.authCard}>
+              <div className={styles.cookieHeader}>
+                <h2 className={styles.cookieTitle}>B2B Login</h2>
+                <span className={styles.cookieHint}>
+                  {authStatus === 'authenticated' && 'Вход выполнен'}
+                  {authStatus === 'anonymous' && 'Вход не выполнен'}
+                  {authStatus === 'checking' && 'Проверяем...'}
+                  {authStatus === 'unknown' && 'Статус неизвестен'}
+                </span>
+              </div>
+              <p className={styles.authText}>
+                После входа cookie token будет подставляться в поиск и оформление автоматически.
+              </p>
+              <div className={styles.authActions}>
+                <a className={styles.loginLink} href="/login">
+                  Войти в B2B
+                </a>
+                {authStatus === 'authenticated' && (
+                  <button type="button" className={styles.cookieClear} onClick={handleLogout}>
+                    Выйти
+                  </button>
+                )}
+              </div>
+              {authMessage && <span className={styles.cookieStatus}>{authMessage}</span>}
+            </section>
             <section className={styles.cookieCard}>
               <div className={styles.cookieHeader}>
                 <h2 className={styles.cookieTitle}>B2B Session Cookie</h2>
