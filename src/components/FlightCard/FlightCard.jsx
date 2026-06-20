@@ -30,6 +30,20 @@ export default function FlightCard({ flight, sessionCookie = '' }) {
   const handleBuy = async () => {
     if (!request_id || !buy_id || buying) return;
 
+    const newTab = window.open('about:blank', '_blank');
+
+    if (!newTab) {
+      setBuyError('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для сайта.');
+      return;
+    }
+
+    try {
+      newTab.document.title = 'Загрузка...';
+      newTab.document.body.innerHTML = '<p style="font-family:sans-serif;padding:24px">Подготовка оформления заказа...</p>';
+    } catch {
+      // ignore if document access is restricted
+    }
+
     setBuying(true);
     setBuyError('');
 
@@ -49,8 +63,9 @@ export default function FlightCard({ flight, sessionCookie = '' }) {
         throw new Error(data.error || 'Не удалось оформить покупку');
       }
 
-      window.open(data.orderUrl, '_blank', 'noopener,noreferrer');
+      newTab.location.href = data.orderUrl;
     } catch (err) {
+      newTab.close();
       setBuyError(err.message);
     } finally {
       setBuying(false);
