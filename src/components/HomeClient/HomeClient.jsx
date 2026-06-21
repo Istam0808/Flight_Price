@@ -4,6 +4,7 @@ import SearchForm from '@/components/SearchForm/SearchForm';
 import PriceTable from '@/components/PriceTable/PriceTable';
 import PriceRangeFilter from '@/components/PriceRangeFilter/PriceRangeFilter';
 import Loader from '@/components/Loader/Loader';
+import ContactInfo from '@/components/ContactInfo/ContactInfo';
 import { useAuth } from '@/hooks/useAuth';
 import { useFlightSearch } from '@/hooks/useFlightSearch';
 import { exportOffersToPdf } from '@/lib/pdf';
@@ -37,6 +38,7 @@ export default function HomeClient({ appUser }) {
   const { search, results, loading, progress, error } = useFlightSearch();
   const { logout: logoutApp, loading: appAuthLoading } = useAuth();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [contactsOpen, setContactsOpen] = useState(false);
   const [stopsFilter, setStopsFilter] = useState('all');
   const [carrierFilter, setCarrierFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -214,6 +216,10 @@ export default function HomeClient({ appUser }) {
     setCookieStatus('');
   };
 
+  const closeContacts = () => {
+    setContactsOpen(false);
+  };
+
   return (
     <main className={styles.main}>
       <header className={styles.header}>
@@ -222,9 +228,14 @@ export default function HomeClient({ appUser }) {
             <img src="/img/logo.png" alt="Luminara Voyage" className={styles.brandLogo} />
             <p className={styles.brandSubtitle}>Прайс-лист рейсов</p>
           </div>
-          <button type="button" className={styles.settingsButton} onClick={() => setSettingsOpen(true)}>
-            Настройки
-          </button>
+          <div className={styles.headerActions}>
+            <button type="button" className={styles.contactButton} onClick={() => setContactsOpen(true)}>
+              Контакты
+            </button>
+            <button type="button" className={styles.settingsButton} onClick={() => setSettingsOpen(true)}>
+              Настройки
+            </button>
+          </div>
         </div>
       </header>
 
@@ -346,6 +357,19 @@ export default function HomeClient({ appUser }) {
             {!hasFilteredResults && (
               <div className={styles.hint}>По выбранному фильтру рейсов не найдено</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {contactsOpen && (
+        <div className={styles.modalOverlay} onClick={closeContacts}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className={styles.modalClose} onClick={closeContacts} aria-label="Закрыть контакты">
+              ×
+            </button>
+            <section className={styles.contactCard}>
+              <ContactInfo />
+            </section>
           </div>
         </div>
       )}

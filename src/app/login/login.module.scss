@@ -92,6 +92,50 @@
   background: #fff3f3;
 }
 
+.contactsDropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contactsToggle {
+  width: 100%;
+  border: 1px solid #f4dd86;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #233577;
+  background: #fff8dc;
+  cursor: pointer;
+  @include smooth;
+
+  &:hover {
+    background: #fff1b8;
+  }
+}
+
+.contactsArrow {
+  font-size: 15px;
+  line-height: 1;
+  @include smooth;
+}
+
+.contactsArrowOpen {
+  transform: rotate(180deg);
+}
+
+.contactsCard {
+  border: 1px solid #e4e8fa;
+  border-radius: 14px;
+  padding: 16px;
+  background: #fbfcff;
+}
+
 .submitButton {
   border: none;
   border-radius: 10px;

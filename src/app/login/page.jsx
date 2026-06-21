@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ContactInfo from '@/components/ContactInfo/ContactInfo';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './login.module.scss';
 
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const { user, login, loading, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [contactsOpen, setContactsOpen] = useState(false);
 
   useEffect(() => {
     if (!user || loading || error) {
@@ -71,6 +73,25 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className={styles.contactsDropdown}>
+          <button
+            type="button"
+            className={styles.contactsToggle}
+            aria-expanded={contactsOpen}
+            onClick={() => setContactsOpen((current) => !current)}
+          >
+            Контакты
+            <span className={`${styles.contactsArrow} ${contactsOpen ? styles.contactsArrowOpen : ''}`} aria-hidden="true">
+              ▾
+            </span>
+          </button>
+
+          {contactsOpen && (
+            <section className={styles.contactsCard}>
+              <ContactInfo />
+            </section>
+          )}
+        </div>
       </section>
     </main>
   );

@@ -1,0 +1,55 @@
+@mixin smooth {
+  transition: all 0.2s ease;
+}
+
+.contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  color: #233577;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #5f6a92;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.link {
+  width: fit-content;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #233577;
+  text-decoration: none;
+  @include smooth;
+
+  &:hover {
+    color: #f5a800;
+  }
+}

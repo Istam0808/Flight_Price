@@ -61,8 +61,17 @@
   color: #7c86ad;
 }
 
-.settingsButton {
+.headerActions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.contactButton,
+.settingsButton {
   min-height: 38px;
   border: 1px solid #e4e8fa;
   border-radius: 8px;
@@ -79,8 +88,14 @@
   }
 }
 
+.contactButton {
+  background: #fff8dc;
+  border-color: #f4dd86;
+}
+
 .authCard,
-.cookieCard {
+.cookieCard,
+.contactCard {
   background: #fff;
   border: 1px solid #e4e8fa;
   border-radius: 12px;
@@ -456,6 +471,11 @@
     font-size: 12px;
   }
 
+  .headerActions {
+    gap: 6px;
+  }
+
+  .contactButton,
   .settingsButton {
     padding: 8px 10px;
     font-size: 13px;
@@ -509,10 +529,15 @@
     flex-basis: 100%;
   }
 
+  .headerActions {
+    width: 100%;
+  }
+
   .brandLogo {
     width: 118px;
   }
 
+  .contactButton,
   .settingsButton {
     width: 100%;
   }
