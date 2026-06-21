@@ -73,26 +73,30 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className={styles.contactsDropdown}>
-          <button
-            type="button"
-            className={styles.contactsToggle}
-            aria-expanded={contactsOpen}
-            onClick={() => setContactsOpen((current) => !current)}
-          >
+        <div className={styles.contactsActions}>
+          <button type="button" className={styles.contactsToggle} onClick={() => setContactsOpen(true)}>
             Контакты
-            <span className={`${styles.contactsArrow} ${contactsOpen ? styles.contactsArrowOpen : ''}`} aria-hidden="true">
-              ▾
-            </span>
           </button>
+        </div>
+      </section>
 
-          {contactsOpen && (
+      {contactsOpen && (
+        <div className={styles.modalOverlay} onClick={() => setContactsOpen(false)}>
+          <div className={styles.modalContent} onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => setContactsOpen(false)}
+              aria-label="Закрыть контакты"
+            >
+              ×
+            </button>
             <section className={styles.contactsCard}>
               <ContactInfo />
             </section>
-          )}
+          </div>
         </div>
-      </section>
+      )}
     </main>
   );
 }
