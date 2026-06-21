@@ -2,9 +2,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateDateRange } from '@/lib/utils';
 
-function isSessionExpiredError(message) {
-  return /Session expired/i.test(message || '');
-}
+const B2B_SESSION_EXPIRED_CODE = 'b2b-session-expired';
 
 async function parseApiResponse(response) {
   const data = await response.json();
@@ -12,6 +10,7 @@ async function parseApiResponse(response) {
   if (!response.ok) {
     const error = new Error(data.error || `Request failed: ${response.status}`);
     error.status = response.status;
+    error.code = data.code || '';
     throw error;
   }
 
@@ -73,8 +72,8 @@ export function useFlightSearch() {
       setResults(grouped);
       setProgress('');
     } catch (err) {
-      if (err.status === 403 && isSessionExpiredError(err.message)) {
-        router.push('/login');
+      if (err.status === 403 && err.code === B2B_SESSION_EXPIRED_CODE) {
+        router.push('/b2b-login?next=/');
         return;
       }
 

@@ -5,6 +5,7 @@ import { formatPrice, stopsLabel } from '@/lib/utils';
 import styles from './FlightCard.module.scss';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const B2B_SESSION_EXPIRED_CODE = 'b2b-session-expired';
 
 function setLoadingTab(newTab) {
   if (!newTab) return;
@@ -66,6 +67,12 @@ export default function FlightCard({ flight, sessionCookie = '' }) {
       });
 
       const data = await res.json();
+
+      if (res.status === 403 && data.code === B2B_SESSION_EXPIRED_CODE) {
+        newTab?.close();
+        window.location.assign('/b2b-login?next=/');
+        return;
+      }
 
       if (!res.ok) {
         throw new Error(data.error || 'Не удалось оформить покупку');

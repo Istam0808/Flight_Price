@@ -17,7 +17,6 @@ const STOPS_FILTERS = [
   { value: '1', label: '1 пересадка' },
   { value: '2', label: '2 пересадки' },
 ];
-const COOKIE_STORAGE_KEY = 'b2b_session_cookie';
 
 function filterByStopsAndCarrier(flights, stopsFilter, carrierFilter) {
   let filtered = flights || [];
@@ -44,18 +43,8 @@ export default function HomeClient({ appUser }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [carrierFilterOpen, setCarrierFilterOpen] = useState(false);
   const [priceRange, setPriceRange] = useState(null);
-  const [cookieValue, setCookieValue] = useState('');
-  const [cookieStatus, setCookieStatus] = useState('');
   const [lastSearch, setLastSearch] = useState(null);
   const [copyStatus, setCopyStatus] = useState('');
-  const [authStatus, setAuthStatus] = useState('checking');
-  const [authMessage, setAuthMessage] = useState('');
-
-  useEffect(() => {
-    const savedCookie = localStorage.getItem(COOKIE_STORAGE_KEY) || '';
-    setCookieValue(savedCookie);
-    refreshAuthStatus();
-  }, []);
 
   const availableCarriers = useMemo(() => {
     const carriers = new Map();
@@ -153,48 +142,6 @@ export default function HomeClient({ appUser }) {
     window.setTimeout(() => setCopyStatus(''), 2000);
   };
 
-  const handleCookieSave = () => {
-    const normalized = cookieValue.trim();
-
-    if (!normalized) {
-      localStorage.removeItem(COOKIE_STORAGE_KEY);
-      setCookieStatus('Cookie удален из localStorage');
-      return;
-    }
-
-    localStorage.setItem(COOKIE_STORAGE_KEY, normalized);
-    setCookieStatus('Cookie сохранен');
-  };
-
-  const handleCookieClear = () => {
-    localStorage.removeItem(COOKIE_STORAGE_KEY);
-    setCookieValue('');
-    setCookieStatus('Cookie очищен');
-  };
-
-  const refreshAuthStatus = async () => {
-    try {
-      const response = await fetch('/api/auth/status');
-      const data = await response.json();
-
-      setAuthStatus(data.authenticated ? 'authenticated' : 'anonymous');
-    } catch {
-      setAuthStatus('unknown');
-    }
-  };
-
-  const handleLogout = async () => {
-    setAuthMessage('');
-
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setAuthStatus('anonymous');
-      setAuthMessage('Вы вышли из B2B');
-    } catch {
-      setAuthMessage('Не удалось выйти из B2B');
-    }
-  };
-
   const handleAppLogout = async () => {
     await logoutApp().catch(() => {});
   };
@@ -204,7 +151,7 @@ export default function HomeClient({ appUser }) {
     setCarrierFilter('all');
     setPriceRange(null);
     setLastSearch({ from: form.from, to: form.to, startDate: form.startDate });
-    search({ ...form, sessionCookie: cookieValue.trim() });
+    search(form);
   };
 
   const handlePriceReset = () => {
@@ -213,7 +160,6 @@ export default function HomeClient({ appUser }) {
 
   const closeSettings = () => {
     setSettingsOpen(false);
-    setCookieStatus('');
   };
 
   const closeContacts = () => {
@@ -351,7 +297,7 @@ export default function HomeClient({ appUser }) {
             </div>
 
             {hasFilteredResults && (
-              <PriceTable results={filteredResults} sessionCookie={cookieValue.trim()} />
+              <PriceTable results={filteredResults} />
             )}
 
             {!hasFilteredResults && (
@@ -393,53 +339,6 @@ export default function HomeClient({ appUser }) {
                   {appAuthLoading ? 'Выходим...' : 'Выйти из системы'}
                 </button>
               </div>
-            </section>
-            <section className={styles.authCard}>
-              <div className={styles.cookieHeader}>
-                <h2 className={styles.cookieTitle}>B2B Login</h2>
-                <span className={styles.cookieHint}>
-                  {authStatus === 'authenticated' && 'Вход выполнен'}
-                  {authStatus === 'anonymous' && 'Вход не выполнен'}
-                  {authStatus === 'checking' && 'Проверяем...'}
-                  {authStatus === 'unknown' && 'Статус неизвестен'}
-                </span>
-              </div>
-              <p className={styles.authText}>
-                После входа cookie token будет подставляться в поиск и оформление автоматически.
-              </p>
-              <div className={styles.authActions}>
-                <a className={styles.loginLink} href="/b2b-login">
-                  Войти в B2B
-                </a>
-                {authStatus === 'authenticated' && (
-                  <button type="button" className={styles.cookieClear} onClick={handleLogout}>
-                    Выйти
-                  </button>
-                )}
-              </div>
-              {authMessage && <span className={styles.cookieStatus}>{authMessage}</span>}
-            </section>
-            <section className={styles.cookieCard}>
-              <div className={styles.cookieHeader}>
-                <h2 className={styles.cookieTitle}>B2B Session Cookie</h2>
-                <span className={styles.cookieHint}>Используется для запросов вместо env</span>
-              </div>
-              <textarea
-                className={styles.cookieInput}
-                value={cookieValue}
-                onChange={(e) => setCookieValue(e.target.value)}
-                placeholder="etmsessid=...; laravel_session=...; XSRF-TOKEN=..."
-                rows={3}
-              />
-              <div className={styles.cookieActions}>
-                <button type="button" className={styles.cookieSave} onClick={handleCookieSave}>
-                  Сохранить cookie
-                </button>
-                <button type="button" className={styles.cookieClear} onClick={handleCookieClear}>
-                  Очистить
-                </button>
-              </div>
-              {cookieStatus && <span className={styles.cookieStatus}>{cookieStatus}</span>}
             </section>
           </div>
         </div>

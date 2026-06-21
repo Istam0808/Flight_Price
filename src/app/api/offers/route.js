@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server';
-import { pollOffers, filterAndNormalize } from '@/lib/api';
-import { getStoredB2BSessionCookie } from '@/lib/b2bAuth';
+import { B2B_SESSION_EXPIRED_CODE, pollOffers, filterAndNormalize } from '@/lib/api';
+import { clearStoredB2BSessionCookie, getStoredB2BSessionCookie } from '@/lib/b2bAuth';
 import { getUserFromRequest } from '@/lib/firebase/session';
+
+function getB2BSessionExpiredResponse() {
+  const response = NextResponse.json(
+    { error: 'B2B сессия истекла. Войдите в B2B заново.', code: B2B_SESSION_EXPIRED_CODE },
+    { status: 403 },
+  );
+
+  clearStoredB2BSessionCookie(response);
+
+  return response;
+}
 
 export async function POST(request) {
   try {
@@ -30,6 +41,10 @@ export async function POST(request) {
     return NextResponse.json({ flights, total: flights.length });
   } catch (err) {
     console.error('[/api/offers]', err);
+    if (err.code === B2B_SESSION_EXPIRED_CODE) {
+      return getB2BSessionExpiredResponse();
+    }
+
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

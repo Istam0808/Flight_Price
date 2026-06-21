@@ -2,6 +2,23 @@ const BASE_URL = process.env.B2B_API_URL;
 const TOKEN = process.env.B2B_TOKEN;
 const ETM_AUTH_KEY = process.env.B2B_ETM_AUTH_KEY;
 const SESSION_COOKIE = process.env.B2B_SESSION_COOKIE;
+export const B2B_SESSION_EXPIRED_CODE = 'b2b-session-expired';
+
+function isB2BAuthFailure(status, details = '') {
+  return [401, 403, 419].includes(status) || /session expired|unauthenticated|unauthorized|csrf/i.test(details);
+}
+
+function createB2BApiError(action, status, details) {
+  const error = new Error(`${action} failed: ${status}${details ? ` - ${details}` : ''}`);
+  error.status = status;
+
+  if (isB2BAuthFailure(status, details)) {
+    error.code = B2B_SESSION_EXPIRED_CODE;
+    error.message = 'B2B сессия истекла. Войдите в B2B заново.';
+  }
+
+  return error;
+}
 
 function getHeaders({ sessionCookie } = {}) {
   const headers = {
@@ -56,7 +73,7 @@ export async function startSearch({ from, to, date, flightClass = 'E', sessionCo
 
   if (!res.ok) {
     const details = await extractErrorMessage(res);
-    throw new Error(`Search failed: ${res.status}${details ? ` - ${details}` : ''}`);
+    throw createB2BApiError('Search', res.status, details);
   }
   const data = await res.json();
   if (data.status !== 'ok') throw new Error(data.message || 'Search error');
@@ -87,7 +104,7 @@ export async function pollOffers(request_id, { onProgress, sessionCookie } = {})
 
     if (!res.ok) {
       const details = await extractErrorMessage(res);
-      throw new Error(`Offers failed: ${res.status}${details ? ` - ${details}` : ''}`);
+      throw createB2BApiError('Offers', res.status, details);
     }
     const data = await res.json();
 
@@ -164,7 +181,7 @@ export async function checkAvailability({ request_id, buy_id, sessionCookie }) {
       };
     }
 
-    throw new Error(`Availability failed: ${res.status}${details ? ` - ${details}` : ''}`);
+    throw createB2BApiError('Availability', res.status, details);
   }
 
   const data = await res.json();
@@ -189,9 +206,7 @@ export async function loadAdditionalServices({ request_id, segment, sessionCooki
 
   if (!res.ok) {
     const details = await extractErrorMessage(res);
-    const error = new Error(`Additional services failed: ${res.status}${details ? ` - ${details}` : ''}`);
-    error.status = res.status;
-    throw error;
+    throw createB2BApiError('Additional services', res.status, details);
   }
 
   return res.json();
