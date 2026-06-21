@@ -13,12 +13,15 @@ function getLoginUrl() {
   return new URL(process.env.B2B_LOGIN_PATH || '/login', process.env.B2B_API_URL).toString();
 }
 
-function getLoginBody(username, password) {
+function getLoginBody(username, password, hiddenFields = {}) {
   const usernameField = process.env.B2B_LOGIN_USERNAME_FIELD || 'login';
   const passwordField = process.env.B2B_LOGIN_PASSWORD_FIELD || 'password';
 
   const body = new URLSearchParams();
 
+  Object.entries(hiddenFields).forEach(([key, value]) => {
+    body.set(key, String(value));
+  });
   Object.entries(parseExtraLoginBody()).forEach(([key, value]) => {
     body.set(key, String(value));
   });
@@ -81,6 +84,62 @@ function extractCookieHeader(headers) {
     .map(setCookieToRequestCookie)
     .filter(Boolean)
     .join('; ');
+}
+
+function mergeCookieHeaders(...cookieHeaders) {
+  const cookies = new Map();
+
+  cookieHeaders
+    .filter(Boolean)
+    .flatMap((cookieHeader) => cookieHeader.split(/;\s*/))
+    .forEach((cookiePair) => {
+      const separatorIndex = cookiePair.indexOf('=');
+
+      if (separatorIndex === -1) {
+        return;
+      }
+
+      const name = cookiePair.slice(0, separatorIndex).trim();
+      const value = cookiePair.slice(separatorIndex + 1).trim();
+
+      if (name && value) {
+        cookies.set(name, value);
+      }
+    });
+
+  return Array.from(cookies.entries())
+    .map(([name, value]) => `${name}=${value}`)
+    .join('; ');
+}
+
+function decodeHtmlValue(value = '') {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function getAttributeValue(input, attribute) {
+  const pattern = new RegExp(`${attribute}\\s*=\\s*(['"])(.*?)\\1`, 'i');
+  return input.match(pattern)?.[2] || '';
+}
+
+function extractHiddenFields(html) {
+  const fields = {};
+  const inputs = html.match(/<input\b[^>]*>/gi) || [];
+
+  inputs.forEach((input) => {
+    const type = getAttributeValue(input, 'type').toLowerCase();
+    const name = getAttributeValue(input, 'name');
+
+    if (type === 'hidden' && name) {
+      fields[decodeHtmlValue(name)] = decodeHtmlValue(getAttributeValue(input, 'value'));
+    }
+  });
+
+  return fields;
 }
 
 function getCommonB2BHeaders() {
@@ -153,6 +212,23 @@ export function clearStoredB2BSessionCookie(response) {
   });
 }
 
+async function loadB2BLoginPage() {
+  const response = await fetch(getLoginUrl(), {
+    method: 'GET',
+    headers: {
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+    redirect: 'manual',
+  });
+  const cookieHeader = extractCookieHeader(response.headers);
+  const html = await response.text().catch(() => '');
+
+  return {
+    cookieHeader,
+    hiddenFields: html ? extractHiddenFields(html) : {},
+  };
+}
+
 export async function loginToB2B({ username, password }) {
   const normalizedUsername = String(username || '').trim();
   const normalizedPassword = String(password || '');
@@ -161,14 +237,24 @@ export async function loginToB2B({ username, password }) {
     throw new Error('Введите логин и пароль B2B');
   }
 
+  const loginPage = await loadB2BLoginPage().catch(() => ({
+    cookieHeader: '',
+    hiddenFields: {},
+  }));
+  const headers = getCommonB2BHeaders();
+
+  if (loginPage.cookieHeader) {
+    headers.Cookie = loginPage.cookieHeader;
+  }
+
   const response = await fetch(getLoginUrl(), {
     method: 'POST',
-    headers: getCommonB2BHeaders(),
-    body: getLoginBody(normalizedUsername, normalizedPassword),
+    headers,
+    body: getLoginBody(normalizedUsername, normalizedPassword, loginPage.hiddenFields),
     redirect: 'manual',
   });
 
-  const sessionCookie = extractCookieHeader(response.headers);
+  const sessionCookie = mergeCookieHeaders(loginPage.cookieHeader, extractCookieHeader(response.headers));
 
   if (!response.ok && !sessionCookie) {
     const details = await extractErrorMessage(response);

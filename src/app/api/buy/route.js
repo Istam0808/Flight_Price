@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import { checkAvailability, loadAdditionalServices } from '@/lib/api';
 import { getStoredB2BSessionCookie } from '@/lib/b2bAuth';
+import { getUserFromRequest } from '@/lib/firebase/session';
 import { buildB2BOrderUrl } from '@/lib/utils';
 
 export async function POST(request) {
   try {
+    const user = await getUserFromRequest(request);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Требуется вход в систему' }, { status: 401 });
+    }
+
     const manualSessionCookie = request.headers.get('x-b2b-session-cookie')?.trim() || '';
     const sessionCookie = getStoredB2BSessionCookie(request) || manualSessionCookie;
     const { request_id, buy_id } = await request.json();

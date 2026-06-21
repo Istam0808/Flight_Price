@@ -1,42 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import styles from './login.module.scss';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const { user, login, loading, error } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user || loading || error) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    router.push(params.get('next') || '/');
+    router.refresh();
+  }, [error, loading, router, user]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError('');
-    setLoading(true);
+    const params = new URLSearchParams(window.location.search);
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Не удалось войти в B2B');
-      }
-
-      router.push('/');
-      router.refresh();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    await login({
+      email,
+      password,
+      redirectTo: params.get('next') || '/',
+    }).catch(() => {});
   };
 
   return (
@@ -44,17 +37,17 @@ export default function LoginPage() {
       <section className={styles.card}>
         <img src="/img/logo.png" alt="Luminara Voyage" className={styles.logo} />
         <div className={styles.header}>
-          <h1 className={styles.title}>Вход в B2B</h1>
-          <p className={styles.subtitle}>Введите данные B2B, чтобы cookie token сохранялся автоматически.</p>
+          <h1 className={styles.title}>Вход в систему</h1>
+          <p className={styles.subtitle}>Введите email и пароль Firebase, чтобы открыть рабочую область Luminara Voyage.</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.field}>
-            <span>Логин</span>
+            <span>Email</span>
             <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               autoComplete="username"
               required
             />
@@ -78,9 +71,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <a className={styles.backLink} href="/">
-          Вернуться на главную
-        </a>
       </section>
     </main>
   );
