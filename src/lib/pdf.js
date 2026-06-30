@@ -12,6 +12,11 @@ const BRAND_NAME = 'LUMINARA VOYAGE';
 const BRAND_YELLOW = [245, 197, 24];
 const BRAND_YELLOW_DARK = [212, 168, 15];
 const BRAND_TEXT = [26, 22, 8];
+const CARRIER_LOGO_MAX_WIDTH = 38;
+const CARRIER_LOGO_MAX_HEIGHT = 26;
+const CARRIER_LOGO_INSET = 4;
+const CARRIER_TEXT_GAP = 10;
+const CARRIER_CELL_LEFT_PADDING = CARRIER_LOGO_INSET + CARRIER_LOGO_MAX_WIDTH + CARRIER_TEXT_GAP;
 let fontsCache = null;
 
 export async function exportOffersToPdf(results, { from, to, startDate } = {}) {
@@ -29,6 +34,7 @@ export async function exportOffersToPdf(results, { from, to, startDate } = {}) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const logo = await loadPdfImage(LOGO_URL);
+  const carrierLogoCache = await buildCarrierLogoCache(allFlights);
 
   const headerBottom = drawCover(doc, pageWidth, allFlights.length, logo);
 
@@ -91,15 +97,32 @@ export async function exportOffersToPdf(results, { from, to, startDate } = {}) {
         valign: 'middle',
       },
       columnStyles: {
-        0: { cellWidth: 115 },
-        1: { cellWidth: 70 },
-        2: { cellWidth: 85 },
-        3: { cellWidth: 78 },
-        4: { cellWidth: 70 },
-        5: { cellWidth: 64 },
-        6: { cellWidth: 65 },
-        7: { cellWidth: 55 },
-        8: { cellWidth: 88, halign: 'right' },
+        0: { cellWidth: 152 },
+        1: { cellWidth: 68 },
+        2: { cellWidth: 82 },
+        3: { cellWidth: 76 },
+        4: { cellWidth: 68 },
+        5: { cellWidth: 62 },
+        6: { cellWidth: 62 },
+        7: { cellWidth: 52 },
+        8: { cellWidth: 73, halign: 'right' },
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 0 && data.section === 'body') {
+          data.cell.styles.cellPadding = {
+            top: 6,
+            right: 5,
+            bottom: 6,
+            left: CARRIER_CELL_LEFT_PADDING,
+          };
+          data.cell.styles.minCellHeight = CARRIER_LOGO_MAX_HEIGHT + 10;
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.column.index === 0 && data.section === 'body') {
+          const flight = flights[data.row.index];
+          drawCarrierBrand(doc, data.cell, flight, carrierLogoCache);
+        }
       },
     });
 
@@ -141,6 +164,156 @@ function buildPdfFileName({ from, to, startDate, carrierCodes = [] } = {}) {
   }
 
   return `flight-pricelist-${dayjs().format('YYYYMMDD-HHmm')}${carriersPart}.pdf`;
+}
+
+async function buildCarrierLogoCache(flights) {
+  const cache = new Map();
+  const logoUrls = new Map();
+
+  (flights || []).forEach((flight) => {
+    const code = flight?.carrier_code;
+    if (!code || logoUrls.has(code) || !flight.carrier_logo) return;
+    logoUrls.set(code, flight.carrier_logo);
+  });
+
+  await Promise.all(
+    [...logoUrls.entries()].map(async ([code, url]) => {
+      try {
+        const image = await loadCarrierLogoForPdf(url);
+
+        if (image) {
+          cache.set(code, image);
+        }
+      } catch {
+        // skip broken logo, fallback initials will be used
+      }
+    }),
+  );
+
+  return cache;
+}
+
+async function loadCarrierLogoForPdf(src) {
+  if (!src) return null;
+
+  try {
+    const response = await fetch(src);
+
+    if (response.ok) {
+      const blob = await response.blob();
+
+      if (blob.size > 0) {
+        const objectUrl = URL.createObjectURL(blob);
+
+        try {
+          const image = await rasterizeImageFromUrl(objectUrl);
+          if (image) return image;
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      }
+    }
+  } catch {
+    // try direct URL below
+  }
+
+  return rasterizeImageFromUrl(src);
+}
+
+function rasterizeImageFromUrl(src) {
+  return new Promise((resolve) => {
+    const image = new Image();
+
+    image.onload = () => {
+      try {
+        const { naturalWidth: width, naturalHeight: height } = image;
+
+        if (!width || !height) {
+          resolve(null);
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          resolve(null);
+          return;
+        }
+
+        context.drawImage(image, 0, 0);
+
+        resolve({
+          dataUrl: canvas.toDataURL('image/png'),
+          format: 'PNG',
+          width,
+          height,
+        });
+      } catch {
+        resolve(null);
+      }
+    };
+
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function getCarrierInitials(code, name) {
+  const normalizedCode = String(code || '').trim().toUpperCase();
+  if (normalizedCode.length >= 2) {
+    return normalizedCode.slice(0, 2);
+  }
+
+  const normalizedName = String(name || '').trim();
+  if (normalizedName.length >= 2) {
+    return normalizedName.slice(0, 2).toUpperCase();
+  }
+
+  return '—';
+}
+
+function drawCarrierBrand(doc, cell, flight, carrierLogoCache) {
+  const slotX = cell.x + CARRIER_LOGO_INSET;
+  const logo = flight?.carrier_code ? carrierLogoCache.get(flight.carrier_code) : null;
+
+  if (logo) {
+    try {
+      const size = getContainedImageSize(logo, CARRIER_LOGO_MAX_WIDTH, CARRIER_LOGO_MAX_HEIGHT);
+      const x = slotX + (CARRIER_LOGO_MAX_WIDTH - size.width) / 2;
+      const y = cell.y + (cell.height - size.height) / 2;
+      doc.addImage(logo.dataUrl, logo.format, x, y, size.width, size.height);
+      return;
+    } catch {
+      // fallback below
+    }
+  }
+
+  drawCarrierFallback(
+    doc,
+    slotX,
+    cell.y + (cell.height - CARRIER_LOGO_MAX_HEIGHT) / 2,
+    flight?.carrier_code,
+    flight?.carrier_name,
+  );
+}
+
+function drawCarrierFallback(doc, x, y, code, name) {
+  doc.setFillColor(232, 235, 245);
+  doc.roundedRect(x, y, CARRIER_LOGO_MAX_HEIGHT, CARRIER_LOGO_MAX_HEIGHT, 3, 3, 'F');
+  doc.setTextColor(74, 86, 128);
+  doc.setFontSize(9);
+  doc.setFont('Roboto', 'bold');
+  doc.text(
+    getCarrierInitials(code, name),
+    x + CARRIER_LOGO_MAX_HEIGHT / 2,
+    y + CARRIER_LOGO_MAX_HEIGHT / 2 + 2,
+    { align: 'center' },
+  );
+  doc.setFont('Roboto', 'normal');
+  doc.setTextColor(40, 40, 40);
 }
 
 async function ensurePdfFonts(doc) {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
 import FlightCard from '@/components/FlightCard/FlightCard';
+import CarrierLogo from '@/components/CarrierLogo/CarrierLogo';
 import { formatPrice } from '@/lib/utils';
 import styles from './PriceTable.module.scss';
 
@@ -11,23 +12,63 @@ dayjs.locale('ru');
 
 const COLLAPSE_ANIMATION_MS = 220;
 
+function isGroupCollapsed(collapsedGroups, groupKey) {
+  return collapsedGroups[groupKey] ?? true;
+}
+
+function collectGroupKeys(results) {
+  return Object.keys(results)
+    .filter((date) => Array.isArray(results[date]) && results[date].length > 0)
+    .sort()
+    .flatMap((date) => {
+      const carrierCodes = new Set(results[date].map((flight) => flight.carrier_code));
+      return [...carrierCodes].map((carrierCode) => `${date}-${carrierCode}`);
+    });
+}
+
 export default function PriceTable({ results, sessionCookie = '' }) {
   const dates = Object.keys(results)
     .filter((date) => Array.isArray(results[date]) && results[date].length > 0)
     .sort();
   const [collapsedGroups, setCollapsedGroups] = useState({});
+  const allGroupKeys = useMemo(() => collectGroupKeys(results), [results]);
 
   if (dates.length === 0) return null;
+
+  const hasCollapsedGroups = allGroupKeys.some((groupKey) => isGroupCollapsed(collapsedGroups, groupKey));
+  const hasExpandedGroups = allGroupKeys.some((groupKey) => !isGroupCollapsed(collapsedGroups, groupKey));
 
   const toggleGroup = (groupKey) => {
     setCollapsedGroups((current) => ({
       ...current,
-      [groupKey]: !current[groupKey],
+      [groupKey]: !isGroupCollapsed(current, groupKey),
     }));
+  };
+
+  const expandAll = () => {
+    setCollapsedGroups(Object.fromEntries(allGroupKeys.map((groupKey) => [groupKey, false])));
+  };
+
+  const collapseAll = () => {
+    setCollapsedGroups(Object.fromEntries(allGroupKeys.map((groupKey) => [groupKey, true])));
   };
 
   return (
     <div className={styles.table}>
+      {allGroupKeys.length > 0 && (
+        <div className={styles.tableToolbar}>
+          {hasCollapsedGroups ? (
+            <button type="button" className={styles.footerButton} onClick={expandAll}>
+              Развернуть все
+            </button>
+          ) : (
+            <button type="button" className={styles.footerButton} onClick={collapseAll}>
+              Свернуть все
+            </button>
+          )}
+        </div>
+      )}
+
       {dates.map((date) => {
         const flights = results[date];
         const weekday = dayjs(date).format('dddd, D MMMM');
@@ -37,6 +78,7 @@ export default function PriceTable({ results, sessionCookie = '' }) {
             acc[key] = {
               carrier_code: flight.carrier_code,
               carrier_name: flight.carrier_name,
+              carrier_logo: flight.carrier_logo,
               items: [],
             };
           }
@@ -65,7 +107,7 @@ export default function PriceTable({ results, sessionCookie = '' }) {
               <div className={styles.groups}>
                 {carrierGroups.map((group) => {
                   const groupKey = `${date}-${group.carrier_code}`;
-                  const isCollapsed = Boolean(collapsedGroups[groupKey]);
+                  const isCollapsed = isGroupCollapsed(collapsedGroups, groupKey);
 
                   return (
                     <div key={groupKey} className={styles.group}>
@@ -75,7 +117,14 @@ export default function PriceTable({ results, sessionCookie = '' }) {
                         aria-expanded={!isCollapsed}
                         onClick={() => toggleGroup(groupKey)}
                       >
-                        <h3 className={styles.groupTitle}>{group.carrier_name}</h3>
+                        <div className={styles.groupTitleWrap}>
+                          <CarrierLogo
+                            logo={group.carrier_logo}
+                            name={group.carrier_name}
+                            code={group.carrier_code}
+                          />
+                          <h3 className={styles.groupTitle}>{group.carrier_name}</h3>
+                        </div>
                         <span className={styles.groupMeta}>
                           <span className={styles.groupInfo}>
                             {group.items.length} предложени{group.items.length === 1 ? 'е' : group.items.length < 5 ? 'я' : 'й'} от{' '}
@@ -104,6 +153,7 @@ export default function PriceTable({ results, sessionCookie = '' }) {
           </section>
         );
       })}
+
     </div>
   );
 }

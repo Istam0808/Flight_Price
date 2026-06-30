@@ -297,7 +297,14 @@ export default function HomeClient({ appUser }) {
             </div>
 
             {hasFilteredResults && (
-              <PriceTable results={filteredResults} />
+              <PriceTable
+                key={
+                  lastSearch
+                    ? `${lastSearch.from}-${lastSearch.to}-${lastSearch.startDate}`
+                    : 'results'
+                }
+                results={filteredResults}
+              />
             )}
 
             {!hasFilteredResults && (

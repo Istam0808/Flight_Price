@@ -1,0 +1,28 @@
+.wrap {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.fallback {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #e8ebf5;
+  color: #4a5680;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
