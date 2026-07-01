@@ -153,32 +153,6 @@
   transform: rotate(-90deg);
 }
 
-.tableToolbar {
-  display: flex;
-  justify-content: flex-start;
-  padding-bottom: 4px;
-}
-
-.footerButton {
-  border: 1px solid #d4d9f5;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #24357d;
-  background: #eef2ff;
-  cursor: pointer;
-
-  &:hover {
-    background: #e5ebff;
-  }
-
-  &:focus-visible {
-    outline: 2px solid #4a90e2;
-    outline-offset: 2px;
-  }
-}
-
 @media (max-width: 768px) {
   .table {
     gap: 20px;

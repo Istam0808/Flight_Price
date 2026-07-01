@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFlightSearch } from '@/hooks/useFlightSearch';
 import { exportOffersToPdf } from '@/lib/pdf';
 import { formatOffersForTelegram } from '@/lib/telegram';
+import { collectGroupKeys, isGroupCollapsed } from '@/lib/flightGroups';
 import styles from '@/app/page.module.scss';
 
 const STOPS_FILTERS = [
@@ -45,6 +46,7 @@ export default function HomeClient({ appUser }) {
   const [priceRange, setPriceRange] = useState(null);
   const [lastSearch, setLastSearch] = useState(null);
   const [copyStatus, setCopyStatus] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   const availableCarriers = useMemo(() => {
     const carriers = new Map();
@@ -126,6 +128,24 @@ export default function HomeClient({ appUser }) {
       ? 'Все авиакомпании'
       : availableCarriers.find((item) => item.code === carrierFilter)?.name || carrierFilter;
 
+  const allGroupKeys = useMemo(() => collectGroupKeys(filteredResults), [filteredResults]);
+  const hasCollapsedGroups = allGroupKeys.some((groupKey) => isGroupCollapsed(collapsedGroups, groupKey));
+
+  const handleToggleGroup = (groupKey) => {
+    setCollapsedGroups((current) => ({
+      ...current,
+      [groupKey]: !isGroupCollapsed(current, groupKey),
+    }));
+  };
+
+  const handleExpandAll = () => {
+    setCollapsedGroups(Object.fromEntries(allGroupKeys.map((groupKey) => [groupKey, false])));
+  };
+
+  const handleCollapseAll = () => {
+    setCollapsedGroups(Object.fromEntries(allGroupKeys.map((groupKey) => [groupKey, true])));
+  };
+
   const handleExportPdf = async () => {
     await exportOffersToPdf(filteredResults, lastSearch || {});
   };
@@ -150,6 +170,7 @@ export default function HomeClient({ appUser }) {
     setStopsFilter('all');
     setCarrierFilter('all');
     setPriceRange(null);
+    setCollapsedGroups({});
     setLastSearch({ from: form.from, to: form.to, startDate: form.startDate });
     search(form);
   };
@@ -203,99 +224,117 @@ export default function HomeClient({ appUser }) {
 
       {!loading && hasRawResults && (
         <div className={styles.resultsShell}>
-          {priceBounds.max > 0 && priceRange && (
-            <aside className={styles.priceSidebar}>
-              <div className={styles.priceFilterPanel}>
-                <PriceRangeFilter
-                  boundsMin={priceBounds.min}
-                  boundsMax={priceBounds.max}
-                  valueMin={priceRange.min}
-                  valueMax={priceRange.max}
-                  onChange={({ min, max }) => setPriceRange({ min, max })}
-                  onReset={handlePriceReset}
-                />
-              </div>
-            </aside>
-          )}
-
-          <div className={styles.mainContent}>
-            <div className={styles.actions}>
-              <div className={styles.filters}>
-                <div className={styles.filterWrap}>
-                  <button type="button" className={styles.filterButton} onClick={() => setFilterOpen((prev) => !prev)}>
-                    Пересадки: {selectedFilterLabel}
-                  </button>
-
-                  {filterOpen && (
-                    <div className={styles.filterMenu}>
-                      {STOPS_FILTERS.map((item) => (
-                        <button
-                          key={item.value}
-                          type="button"
-                          className={`${styles.filterItem} ${stopsFilter === item.value ? styles.filterItemActive : ''}`}
-                          onClick={() => {
-                            setStopsFilter(item.value);
-                            setFilterOpen(false);
-                          }}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+          <aside className={styles.priceSidebar}>
+            <div className={styles.sidebarPanel}>
+              {priceBounds.max > 0 && priceRange && (
+                <div className={styles.sidebarSection}>
+                  <PriceRangeFilter
+                    boundsMin={priceBounds.min}
+                    boundsMax={priceBounds.max}
+                    valueMin={priceRange.min}
+                    valueMax={priceRange.max}
+                    onChange={({ min, max }) => setPriceRange({ min, max })}
+                    onReset={handlePriceReset}
+                  />
                 </div>
+              )}
 
-                {availableCarriers.length > 0 && (
+              <div className={styles.sidebarSection}>
+                <div className={styles.filters}>
                   <div className={styles.filterWrap}>
-                    <button
-                      type="button"
-                      className={styles.filterButton}
-                      onClick={() => setCarrierFilterOpen((prev) => !prev)}
-                    >
-                      Авиакомпания: {selectedCarrierLabel}
+                    <button type="button" className={styles.filterButton} onClick={() => setFilterOpen((prev) => !prev)}>
+                      Пересадки: {selectedFilterLabel}
                     </button>
 
-                    {carrierFilterOpen && (
+                    {filterOpen && (
                       <div className={styles.filterMenu}>
-                        <button
-                          type="button"
-                          className={`${styles.filterItem} ${carrierFilter === 'all' ? styles.filterItemActive : ''}`}
-                          onClick={() => {
-                            setCarrierFilter('all');
-                            setCarrierFilterOpen(false);
-                          }}
-                        >
-                          Все авиакомпании
-                        </button>
-                        {availableCarriers.map((item) => (
+                        {STOPS_FILTERS.map((item) => (
                           <button
-                            key={item.code}
+                            key={item.value}
                             type="button"
-                            className={`${styles.filterItem} ${carrierFilter === item.code ? styles.filterItemActive : ''}`}
+                            className={`${styles.filterItem} ${stopsFilter === item.value ? styles.filterItemActive : ''}`}
                             onClick={() => {
-                              setCarrierFilter(item.code);
-                              setCarrierFilterOpen(false);
+                              setStopsFilter(item.value);
+                              setFilterOpen(false);
                             }}
                           >
-                            {item.code} — {item.name}
+                            {item.label}
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-                )}
+
+                  {availableCarriers.length > 0 && (
+                    <div className={styles.filterWrap}>
+                      <button
+                        type="button"
+                        className={styles.filterButton}
+                        onClick={() => setCarrierFilterOpen((prev) => !prev)}
+                      >
+                        Авиакомпания: {selectedCarrierLabel}
+                      </button>
+
+                      {carrierFilterOpen && (
+                        <div className={styles.filterMenu}>
+                          <button
+                            type="button"
+                            className={`${styles.filterItem} ${carrierFilter === 'all' ? styles.filterItemActive : ''}`}
+                            onClick={() => {
+                              setCarrierFilter('all');
+                              setCarrierFilterOpen(false);
+                            }}
+                          >
+                            Все авиакомпании
+                          </button>
+                          {availableCarriers.map((item) => (
+                            <button
+                              key={item.code}
+                              type="button"
+                              className={`${styles.filterItem} ${carrierFilter === item.code ? styles.filterItemActive : ''}`}
+                              onClick={() => {
+                                setCarrierFilter(item.code);
+                                setCarrierFilterOpen(false);
+                              }}
+                            >
+                              {item.code} — {item.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className={styles.exportActions}>
-                <button type="button" className={styles.copyTgButton} onClick={handleCopyTg} disabled={!hasFilteredResults}>
-                  {copyStatus || 'Copy TG'}
-                </button>
-                <button type="button" className={styles.exportButton} onClick={handleExportPdf} disabled={!hasFilteredResults}>
-                  Экспорт PDF ({filteredFlightsCount})
-                </button>
+              <div className={styles.sidebarSection}>
+                <div className={styles.exportActions}>
+                  <button type="button" className={styles.copyTgButton} onClick={handleCopyTg} disabled={!hasFilteredResults}>
+                    {copyStatus || 'Copy TG'}
+                  </button>
+                  <button type="button" className={styles.exportButton} onClick={handleExportPdf} disabled={!hasFilteredResults}>
+                    Экспорт PDF ({filteredFlightsCount})
+                  </button>
+                </div>
               </div>
+
+              {hasFilteredResults && allGroupKeys.length > 0 && (
+                <div className={styles.sidebarSection}>
+                  {hasCollapsedGroups ? (
+                    <button type="button" className={styles.expandButton} onClick={handleExpandAll}>
+                      Развернуть все
+                    </button>
+                  ) : (
+                    <button type="button" className={styles.expandButton} onClick={handleCollapseAll}>
+                      Свернуть все
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
+          </aside>
 
+          <div className={styles.mainContent}>
             {hasFilteredResults && (
               <PriceTable
                 key={
@@ -304,6 +343,8 @@ export default function HomeClient({ appUser }) {
                     : 'results'
                 }
                 results={filteredResults}
+                collapsedGroups={collapsedGroups}
+                onToggleGroup={handleToggleGroup}
               />
             )}
 

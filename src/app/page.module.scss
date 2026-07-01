@@ -265,13 +265,32 @@
   align-self: start;
 }
 
-.priceFilterPanel {
+.priceFilterPanel,
+.sidebarPanel {
   background: #fff;
   border: 1px solid #dfe3f3;
   border-radius: 10px;
   box-shadow: 0 12px 24px rgba(17, 35, 102, 0.1);
   padding: 12px 14px 10px;
   overflow: visible;
+}
+
+.sidebarPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+
+  & + & {
+    border-top: 1px solid #e8ecf7;
+  }
 }
 
 .mainContent {
@@ -283,27 +302,21 @@
   padding-top: 2px;
 }
 
-.actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 12px 0 4px;
-}
-
 .filters {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .filterWrap {
   position: relative;
+  width: 100%;
   min-width: 0;
 }
 
 .filterButton {
+  width: 100%;
   max-width: 100%;
   border: 1px solid #d4d9f5;
   border-radius: 8px;
@@ -328,7 +341,8 @@
   top: calc(100% + 8px);
   left: 0;
   z-index: 10;
-  min-width: 210px;
+  width: 100%;
+  min-width: 0;
   max-width: min(320px, calc(100vw - 32px));
   max-height: min(360px, calc(100vh - 180px));
   background: #fff;
@@ -364,12 +378,14 @@
 
 .exportActions {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .copyTgButton {
+  width: 100%;
   min-height: 42px;
   border: 1px solid #2d4fcf;
   border-radius: 8px;
@@ -392,6 +408,7 @@
 }
 
 .exportButton {
+  width: 100%;
   min-height: 42px;
   border: none;
   border-radius: 8px;
@@ -414,6 +431,28 @@
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+  }
+}
+
+.expandButton {
+  width: 100%;
+  border: 1px solid #d4d9f5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #24357d;
+  background: #eef2ff;
+  cursor: pointer;
+  @include smooth;
+
+  &:hover {
+    background: #e5ebff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #4a90e2;
+    outline-offset: 2px;
   }
 }
 
@@ -490,33 +529,8 @@
     gap: 20px;
   }
 
-  .priceFilterPanel {
+  .sidebarSection {
     padding: 12px;
-  }
-
-  .actions {
-    align-items: stretch;
-    gap: 10px;
-    padding-top: 4px;
-  }
-
-  .filters,
-  .exportActions {
-    width: 100%;
-  }
-
-  .filterWrap {
-    flex: 1 1 calc(50% - 4px);
-  }
-
-  .filterButton,
-  .copyTgButton,
-  .exportButton {
-    width: 100%;
-  }
-
-  .filterMenu {
-    width: 100%;
   }
 }
 
@@ -544,12 +558,6 @@
 
   .resultsShell {
     padding-inline: 10px;
-  }
-
-  .filterWrap,
-  .copyTgButton,
-  .exportButton {
-    flex-basis: 100%;
   }
 
   .filterMenu {

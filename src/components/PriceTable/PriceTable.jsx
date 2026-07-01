@@ -1,74 +1,27 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
 import FlightCard from '@/components/FlightCard/FlightCard';
 import CarrierLogo from '@/components/CarrierLogo/CarrierLogo';
 import { formatPrice } from '@/lib/utils';
+import { isGroupCollapsed } from '@/lib/flightGroups';
 import styles from './PriceTable.module.scss';
 
 dayjs.locale('ru');
 
 const COLLAPSE_ANIMATION_MS = 220;
 
-function isGroupCollapsed(collapsedGroups, groupKey) {
-  return collapsedGroups[groupKey] ?? true;
-}
-
-function collectGroupKeys(results) {
-  return Object.keys(results)
-    .filter((date) => Array.isArray(results[date]) && results[date].length > 0)
-    .sort()
-    .flatMap((date) => {
-      const carrierCodes = new Set(results[date].map((flight) => flight.carrier_code));
-      return [...carrierCodes].map((carrierCode) => `${date}-${carrierCode}`);
-    });
-}
-
-export default function PriceTable({ results, sessionCookie = '' }) {
+export default function PriceTable({ results, sessionCookie = '', collapsedGroups = {}, onToggleGroup }) {
   const dates = Object.keys(results)
     .filter((date) => Array.isArray(results[date]) && results[date].length > 0)
     .sort();
-  const [collapsedGroups, setCollapsedGroups] = useState({});
-  const allGroupKeys = useMemo(() => collectGroupKeys(results), [results]);
 
   if (dates.length === 0) return null;
 
-  const hasCollapsedGroups = allGroupKeys.some((groupKey) => isGroupCollapsed(collapsedGroups, groupKey));
-  const hasExpandedGroups = allGroupKeys.some((groupKey) => !isGroupCollapsed(collapsedGroups, groupKey));
-
-  const toggleGroup = (groupKey) => {
-    setCollapsedGroups((current) => ({
-      ...current,
-      [groupKey]: !isGroupCollapsed(current, groupKey),
-    }));
-  };
-
-  const expandAll = () => {
-    setCollapsedGroups(Object.fromEntries(allGroupKeys.map((groupKey) => [groupKey, false])));
-  };
-
-  const collapseAll = () => {
-    setCollapsedGroups(Object.fromEntries(allGroupKeys.map((groupKey) => [groupKey, true])));
-  };
-
   return (
     <div className={styles.table}>
-      {allGroupKeys.length > 0 && (
-        <div className={styles.tableToolbar}>
-          {hasCollapsedGroups ? (
-            <button type="button" className={styles.footerButton} onClick={expandAll}>
-              Развернуть все
-            </button>
-          ) : (
-            <button type="button" className={styles.footerButton} onClick={collapseAll}>
-              Свернуть все
-            </button>
-          )}
-        </div>
-      )}
-
       {dates.map((date) => {
         const flights = results[date];
         const weekday = dayjs(date).format('dddd, D MMMM');
@@ -115,7 +68,7 @@ export default function PriceTable({ results, sessionCookie = '' }) {
                         className={styles.groupHeader}
                         type="button"
                         aria-expanded={!isCollapsed}
-                        onClick={() => toggleGroup(groupKey)}
+                        onClick={() => onToggleGroup?.(groupKey)}
                       >
                         <div className={styles.groupTitleWrap}>
                           <CarrierLogo
